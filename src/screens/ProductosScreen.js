@@ -31,7 +31,7 @@ export default function ProductosScreen() {
       return;
     }
     try {
-      const datosBD = await obtenerProductos({ empresaId });
+      const datosBD = await obtenerProductos({ empresaId, incluirInactivos: true });
       setProductos(Array.isArray(datosBD) ? datosBD : []);
     } catch (e) {
       console.warn('No se pudieron leer los productos:', e?.message);
@@ -51,8 +51,16 @@ export default function ProductosScreen() {
       const nombre = (producto.categoria || '').trim();
       if (nombre && !unicas.includes(nombre)) unicas.push(nombre);
     }
-    return ['Todos', ...unicas.sort((a, b) => a.localeCompare(b)), 'Critico'];
+    return [
+      'Todos',
+      ...unicas.sort((a, b) => a.localeCompare(b)),
+      'Critico',
+      'Inactivos',
+    ];
   }, [productos]);
+
+  const esInactivo = (producto) =>
+    (producto.estado ?? (Number(producto.activo) === 0 ? 'inactivo' : 'activo')) === 'inactivo';
 
   const filtrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -66,7 +74,9 @@ export default function ProductosScreen() {
         categoria === 'Todos' ||
         (categoria === 'Critico'
           ? (producto.stock ?? 0) <= (producto.stock_minimo ?? 5)
-          : producto.categoria === categoria);
+          : categoria === 'Inactivos'
+            ? esInactivo(producto)
+            : producto.categoria === categoria);
 
       return coincideTexto && coincideCategoria;
     });
@@ -76,6 +86,9 @@ export default function ProductosScreen() {
     if (nombre === 'Todos') return productos.length;
     if (nombre === 'Critico') {
       return productos.filter((p) => (p.stock ?? 0) <= (p.stock_minimo ?? 5)).length;
+    }
+    if (nombre === 'Inactivos') {
+      return productos.filter(esInactivo).length;
     }
     return productos.filter((p) => p.categoria === nombre).length;
   };
@@ -122,9 +135,15 @@ export default function ProductosScreen() {
         {categorias.map((nombre) => (
           <ChipFiltro
             key={nombre}
-            etiqueta={nombre === 'Critico' ? 'Existencia crítica' : nombre}
+            etiqueta={
+              nombre === 'Critico'
+                ? 'Existencia crítica'
+                : nombre === 'Inactivos'
+                  ? 'Inactivos'
+                  : nombre
+            }
             activo={categoria === nombre}
-            alerta={nombre === 'Critico'}
+            alerta={nombre === 'Critico' || nombre === 'Inactivos'}
             conteo={contarCategoria(nombre)}
             onPress={() => setCategoria(nombre)}
           />
@@ -134,8 +153,10 @@ export default function ProductosScreen() {
       <View style={styles.cabeceraCatalogo}>
         <View style={{ flex: 1 }}>
           <View style={styles.tituloLinea}>
-            <Text style={styles.tituloCatalogo}>Catálogo Activo</Text>
-            <View style={styles.punto} />
+            <Text style={styles.tituloCatalogo}>
+              {categoria === 'Inactivos' ? 'Catálogo Inactivo' : 'Catálogo'}
+            </Text>
+            <View style={[styles.punto, categoria === 'Inactivos' && styles.puntoInactivo]} />
           </View>
           <Text style={styles.subtituloCatalogo}>
             {filtrados.length} {filtrados.length === 1 ? 'producto' : 'productos'} en tu catálogo
@@ -167,7 +188,11 @@ export default function ProductosScreen() {
             cantidad={cantidades[producto.id] ?? 0}
             onRestar={() => cambiarCantidad(producto.id, -1)}
             onSumar={() => cambiarCantidad(producto.id, 1)}
-            onCobrar={() => navigation.navigate('Vender', { productoId: producto.id })}
+            onCobrar={() => {
+              if (!esInactivo(producto)) {
+                navigation.navigate('Vender', { productoId: producto.id });
+              }
+            }}
             onPress={() => navigation.navigate('ProductoForm', { producto })}
           />
         ))
@@ -226,6 +251,9 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colores.exito,
+  },
+  puntoInactivo: {
+    backgroundColor: colores.error,
   },
   subtituloCatalogo: {
     fontSize: 12,

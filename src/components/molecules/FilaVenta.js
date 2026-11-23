@@ -9,6 +9,9 @@ export default function FilaVenta({ venta, onPress }) {
   const nombreVenta = venta.primer_producto || primerItem?.nombre || `Venta #${venta.numero_venta ?? venta.numero ?? venta.id}`;
   const horaTexto = venta.creado_en ? venta.creado_en.substring(11, 16) : (venta.hora ?? venta.fecha ?? 'Hoy');
   const cantidadTexto = venta.total_items ? `${venta.total_items} un.` : (primerItem ? `${primerItem.cantidad} un.` : `${venta.items ?? 1} prod.`);
+  const anulada = String(venta.estado ?? '').toLowerCase() === 'anulada';
+  const estadoTexto = anulada ? 'Anulada' : esQr ? 'QR Banco' : 'Completado';
+  const colorEstado = anulada ? colores.error : esQr ? colores.terciario : '#0066B5';
 
   return (
     <TouchableOpacity
@@ -64,11 +67,8 @@ export default function FilaVenta({ venta, onPress }) {
         <Text style={styles.saleAmount} numberOfLines={1}>
           {bs(venta.total)}
         </Text>
-        <Text
-          style={[styles.saleStatus, { color: esQr ? colores.terciario : '#0066B5' }]}
-          numberOfLines={1}
-        >
-          {esQr ? 'QR Banco' : 'Completado'}
+        <Text style={[styles.saleStatus, { color: colorEstado }]} numberOfLines={1}>
+          {estadoTexto}
         </Text>
       </View>
     </TouchableOpacity>

@@ -165,6 +165,7 @@ export default function VentaDetalleScreen() {
 
   const metodo = (venta.metodo_pago || venta.metodo || 'efectivo').toLowerCase();
   const esQr = metodo === 'qr';
+  const anulada = String(venta.estado ?? '').toLowerCase() === 'anulada';
   const numeroFolio = String(venta.numero_venta ?? venta.numero ?? venta.id).padStart(3, '0');
   const itemsLista = venta.items || venta.detalle || [];
   const totalCantidad = itemsLista.reduce((acc, i) => acc + (i.cantidad || 1), 0);
@@ -185,6 +186,9 @@ export default function VentaDetalleScreen() {
       lineas,
       `TOTAL: ${bs(venta.total)}`,
       `Pago: ${esQr ? 'QR' : 'Efectivo'}`,
+      !esQr ? `Monto recibido: ${bs(venta.monto_recibido ?? venta.total)}` : '',
+      !esQr ? `Cambio: ${bs(venta.cambio ?? 0)}` : '',
+      anulada ? 'Estado: Anulada' : '',
     ]
       .filter(Boolean)
       .join('\n');
@@ -218,7 +222,11 @@ export default function VentaDetalleScreen() {
                 Atendido por {venta.vendedor || 'Usuario'}
               </Text>
             </View>
-            <Etiqueta texto="Pagado" variante="exito" punto />
+            <Etiqueta
+              texto={anulada ? 'Anulada' : 'Pagado'}
+              variante={anulada ? 'error' : 'exito'}
+              punto
+            />
           </View>
 
           <Separador margenVertical={espacios.md} />
@@ -238,6 +246,22 @@ export default function VentaDetalleScreen() {
             <Text style={styles.etiqueta}>Unidades vendidas</Text>
             <Text style={styles.valor}>{totalCantidad} un.</Text>
           </View>
+          {!esQr ? (
+            <>
+              <View style={styles.fila}>
+                <Text style={styles.etiqueta}>Monto recibido</Text>
+                <Text style={styles.valor}>
+                  {bs(venta.monto_recibido ?? venta.total)}
+                </Text>
+              </View>
+              <View style={styles.fila}>
+                <Text style={styles.etiqueta}>Cambio entregado</Text>
+                <Text style={[styles.valor, { color: colores.exito }]}>
+                  {bs(venta.cambio ?? 0)}
+                </Text>
+              </View>
+            </>
+          ) : null}
 
           <Separador margenVertical={espacios.md} />
 
@@ -284,14 +308,18 @@ export default function VentaDetalleScreen() {
             variante="secundario"
             onPress={compartirTicket}
           />
-          <Boton
-            titulo={anulando ? 'Anulando...' : 'Anular venta'}
-            icono="trash-outline"
-            variante="peligro"
-            cargando={anulando}
-            deshabilitado={anulando}
-            onPress={handleConfirmarAnulacion}
-          />
+          {anulada ? (
+            <Etiqueta texto="Esta venta fue anulada" variante="error" punto />
+          ) : (
+            <Boton
+              titulo={anulando ? 'Anulando...' : 'Anular venta'}
+              icono="trash-outline"
+              variante="peligro"
+              cargando={anulando}
+              deshabilitado={anulando}
+              onPress={handleConfirmarAnulacion}
+            />
+          )}
           <Boton
             titulo="Volver al historial"
             icono="arrow-back-outline"

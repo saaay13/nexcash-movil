@@ -19,6 +19,7 @@ export async function registrarVenta({
   items,
   descuento = 0,
   metodoPago = 'efectivo',
+  montoRecibido = null,
 }) {
   const { empresa, usuario } = idsValidos(empresaId, usuarioId);
   if (!empresa) throw new Error('No hay una empresa activa. Vuelve a seleccionar tu negocio.');
@@ -31,6 +32,22 @@ export async function registrarVenta({
   const metodoNormalizado = String(metodoPago).toLowerCase();
   if (!METODOS_PAGO.includes(metodoNormalizado)) {
     throw new Error('Método de pago no válido (solo efectivo o qr).');
+  }
+
+  let montoRecibidoNum = null;
+  if (
+    montoRecibido !== null &&
+    montoRecibido !== undefined &&
+    String(montoRecibido).trim() !== ''
+  ) {
+    montoRecibidoNum = Number(String(montoRecibido).replace(',', '.'));
+    if (!Number.isFinite(montoRecibidoNum) || montoRecibidoNum < 0) {
+      throw new Error('El monto recibido debe ser un número mayor o igual a 0.');
+    }
+  }
+
+  if (metodoNormalizado === 'efectivo' && montoRecibidoNum === null) {
+    throw new Error('Ingresa el monto recibido en efectivo.');
   }
 
   const db = await obtenerBD();
@@ -65,13 +82,13 @@ export async function registrarVenta({
 
     for (const item of items) {
       const prod = await txn.getFirstAsync(
-        `SELECT id, nombre, precio_venta, stock_actual, activo
+        `SELECT id, nombre, precio_venta, stock_actual, activo, estado
          FROM productos WHERE id = ? AND empresa_id = ?`,
         Number(item.productoId),
         empresa
       );
 
-      if (!prod || Number(prod.activo) === 0) {
+      if (!prod || Number(prod.activo) === 0 || prod.estado === 'inactivo') {
         throw new Error(`El producto #${item.productoId} no está disponible en esta empresa.`);
       }
 
@@ -104,6 +121,15 @@ export async function registrarVenta({
     const desc = Math.max(0, redondear(descuento));
     const total = Math.max(0, redondear(subtotal - desc));
 
+    if (metodoNormalizado === 'efectivo' && montoRecibidoNum < total) {
+      throw new Error('El monto recibido debe ser mayor o igual al total de la venta.');
+    }
+
+    const recibido =
+      metodoNormalizado === 'efectivo' ? redondear(montoRecibidoNum) : total;
+    const cambio =
+      metodoNormalizado === 'efectivo' ? redondear(Math.max(0, recibido - total)) : 0;
+
     const max = await txn.getFirstAsync('SELECT MAX(numero_venta) AS ultimo FROM ventas');
     const siguienteNumero = Number(max?.ultimo || 0) + 1;
 
@@ -125,11 +151,12 @@ export async function registrarVenta({
 
     await txn.runAsync(
       `INSERT INTO pagos_venta (venta_id, metodo_pago, monto, monto_recibido, cambio)
-       VALUES (?, ?, ?, ?, 0)`,
+       VALUES (?, ?, ?, ?, ?)`,
       ventaId,
       metodoNormalizado,
       total,
-      total
+      recibido,
+      cambio
     );
 
     for (const linea of lineas) {
@@ -176,6 +203,8 @@ export async function registrarVenta({
       metodo_pago: metodoNormalizado,
       items: lineas.length,
       sesion_caja_id: sesion.id,
+      monto_recibido: recibido,
+      cambio,
     };
   });
 
@@ -225,7 +254,9 @@ export async function obtenerVentaPorId(id, empresaId) {
   const filtroEmpresa = Number.isInteger(empresa) && empresa > 0;
 
   const venta = await db.getFirstAsync(
-    `SELECT v.*, u.nombre AS vendedor
+    `SELECT v.*, u.nombre AS vendedor,
+       (SELECT p.monto_recibido FROM pagos_venta p WHERE p.venta_id = v.id LIMIT 1) AS monto_recibido,
+       (SELECT p.cambio FROM pagos_venta p WHERE p.venta_id = v.id LIMIT 1) AS cambio
      FROM ventas v
      JOIN usuarios u ON u.id = v.usuario_id
      WHERE v.id = ?${filtroEmpresa ? ' AND v.empresa_id = ?' : ''}`,
@@ -324,7 +355,7 @@ export async function anularVenta(ventaId, empresaId) {
 
   await ejecutarTransaccion(db, async (txn) => {
     const venta = await txn.getFirstAsync(
-      'SELECT id FROM ventas WHERE id = ? AND empresa_id = ?',
+      'SELECT id, estado, numero_venta, usuario_id FROM ventas WHERE id = ? AND empresa_id = ?',
       Number(ventaId),
       empresa
     );
@@ -333,26 +364,64 @@ export async function anularVenta(ventaId, empresaId) {
       throw new Error('La venta no existe o no pertenece a tu empresa.');
     }
 
+    if (venta.estado === 'anulada') {
+      anulada = true;
+      return;
+    }
+
+    if (venta.estado !== 'completada') {
+      throw new Error('Solo se pueden anular ventas completadas.');
+    }
+
     const items = await txn.getAllAsync(
-      'SELECT producto_id, cantidad FROM detalle_venta WHERE venta_id = ?',
+      'SELECT producto_id, cantidad FROM detalle_venta WHERE venta_id = ? ORDER BY id ASC',
       Number(ventaId)
     );
 
     for (const item of items) {
-      await txn.runAsync(
-        'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ? AND empresa_id = ?',
-        Number(item.cantidad),
+      const producto = await txn.getFirstAsync(
+        'SELECT stock_actual FROM productos WHERE id = ? AND empresa_id = ?',
         Number(item.producto_id),
         empresa
       );
+
+      if (!producto) {
+        throw new Error('Uno de los productos de la venta ya no existe.');
+      }
+
+      const cantidad = Number(item.cantidad);
+      const stockAnterior = Number(producto.stock_actual);
+      const stockNuevo = stockAnterior + cantidad;
+
+      await txn.runAsync(
+        'UPDATE productos SET stock_actual = ? WHERE id = ? AND empresa_id = ?',
+        stockNuevo,
+        Number(item.producto_id),
+        empresa
+      );
+
+      await txn.runAsync(
+        `INSERT INTO movimientos_inventario
+          (empresa_id, producto_id, usuario_id, venta_id, tipo, cantidad, stock_anterior, stock_nuevo, motivo)
+         VALUES (?, ?, ?, ?, 'ajuste', ?, ?, ?, ?)`,
+        empresa,
+        Number(item.producto_id),
+        Number(venta.usuario_id),
+        Number(ventaId),
+        cantidad,
+        stockAnterior,
+        stockNuevo,
+        `Devolución por anulación de venta #${venta.numero_venta}`
+      );
     }
 
-    await txn.runAsync('DELETE FROM detalle_venta WHERE venta_id = ?', Number(ventaId));
-    await txn.runAsync('DELETE FROM pagos_venta WHERE venta_id = ?', Number(ventaId));
-    await txn.runAsync('DELETE FROM movimientos_inventario WHERE venta_id = ?', Number(ventaId));
-    await txn.runAsync('DELETE FROM ventas WHERE id = ? AND empresa_id = ?', Number(ventaId), empresa);
+    await txn.runAsync(
+      "UPDATE ventas SET estado = 'anulada' WHERE id = ? AND empresa_id = ?",
+      Number(ventaId),
+      empresa
+    );
     anulada = true;
   });
 
-  return { id: ventaId, anulada };
+  return { id: Number(ventaId), anulada };
 }

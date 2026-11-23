@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { Boton } from '../components/atoms';
+import { Boton, Campo } from '../components/atoms';
 import {
   Buscador,
   DialogoConfirmacion,
@@ -32,6 +32,8 @@ import {
   descargarReciboPdf,
 } from '../services';
 
+const redondear = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
 export default function VenderScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -42,6 +44,7 @@ export default function VenderScreen() {
   const [busqueda, setBusqueda] = useState('');
   const [carrito, setCarrito] = useState({});
   const [metodoPago, setMetodoPago] = useState('Efectivo');
+  const [montoRecibido, setMontoRecibido] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -173,8 +176,21 @@ export default function VenderScreen() {
     [productos, carrito]
   );
 
-  const total = lineas.reduce((suma, linea) => suma + linea.subtotal, 0);
+  const total = redondear(lineas.reduce((suma, linea) => suma + linea.subtotal, 0));
   const unidades = lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
+  const esEfectivo = metodoPago.toLowerCase() !== 'qr';
+  const montoRecibidoNum = Number(String(montoRecibido).replace(',', '.'));
+  const montoEsValido =
+    montoRecibido.trim() !== '' && Number.isFinite(montoRecibidoNum) && montoRecibidoNum >= 0;
+  const montoSuficiente = esEfectivo && montoEsValido && redondear(montoRecibidoNum) >= total;
+  const cambio = montoSuficiente ? redondear(montoRecibidoNum - total) : 0;
+  const textoCambio = !esEfectivo
+    ? ''
+    : !montoEsValido
+      ? '—'
+      : montoSuficiente
+        ? bs(cambio)
+        : `Falta ${bs(Math.max(0, total - redondear(montoRecibidoNum)))}`;
 
   function cambiarCantidad(producto, delta) {
     const stock = Number(producto.stock ?? producto.stock_actual ?? 0);
@@ -317,6 +333,33 @@ export default function VenderScreen() {
       return;
     }
 
+    if (esEfectivo) {
+      if (!montoEsValido) {
+        setDialogo({
+          visible: true,
+          tipo: 'advertencia',
+          titulo: 'Monto recibido no válido',
+          mensaje: 'Ingresa un monto recibido válido para el pago en efectivo.',
+          textoConfirmar: 'Entendido',
+          textoCancelar: null,
+          onConfirmar: cerrarDialogo,
+        });
+        return;
+      }
+      if (!montoSuficiente) {
+        setDialogo({
+          visible: true,
+          tipo: 'advertencia',
+          titulo: 'Monto insuficiente',
+          mensaje: `El monto recibido debe ser mayor o igual al total de la venta (${bs(total)}).`,
+          textoConfirmar: 'Entendido',
+          textoCancelar: null,
+          onConfirmar: cerrarDialogo,
+        });
+        return;
+      }
+    }
+
     try {
       setProcesando(true);
       const itemsVenta = lineas.map((l) => ({
@@ -329,7 +372,8 @@ export default function VenderScreen() {
         usuarioId,
         items: itemsVenta,
         descuento: 0,
-        metodoPago: metodoPago.toLowerCase() === 'qr' ? 'qr' : 'efectivo',
+        metodoPago: esEfectivo ? 'efectivo' : 'qr',
+        montoRecibido: esEfectivo ? montoRecibidoNum : null,
       });
 
       const ahora = new Date();
@@ -366,6 +410,7 @@ export default function VenderScreen() {
       fijarCarrito({});
       setEscaneados([]);
       setBusqueda('');
+      setMontoRecibido('');
       cargarProductos();
 
       setDialogo({
@@ -374,7 +419,7 @@ export default function VenderScreen() {
         titulo: '¡Venta completada!',
         mensaje: `Ticket #${numeroTicket}\nTotal cobrado: ${bs(
           ventaGuardada.total
-        )}\n¿Deseas generar el QR para que el cliente descargue su comprobante?`,
+        )}${esEfectivo ? `\nCambio: ${bs(ventaGuardada.cambio ?? 0)}` : ''}\n¿Deseas generar el QR para que el cliente descargue su comprobante?`,
         textoConfirmar: 'Generar QR',
         textoCancelar: 'Ahora no',
         onConfirmar: () => {
@@ -531,6 +576,32 @@ export default function VenderScreen() {
             })}
           </View>
 
+          {esEfectivo ? (
+            <View style={styles.cobroEfectivo}>
+              <Campo
+                etiqueta="Monto recibido (Bs)"
+                valor={montoRecibido}
+                onChangeText={setMontoRecibido}
+                placeholder="0.00"
+                icono="cash-outline"
+                prefijo="Bs "
+                keyboardType="decimal-pad"
+                style={styles.campoMonto}
+              />
+              <View style={styles.cambioFila}>
+                <Text style={styles.cambioEtiqueta}>Cambio</Text>
+                <Text
+                  style={[
+                    styles.cambioMonto,
+                    montoRecibido.trim() !== '' && !montoSuficiente && styles.cambioFalta,
+                  ]}
+                >
+                  {textoCambio}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.filaTotal}>
             <View>
               <Text style={styles.totalEtiqueta}>TOTAL A COBRAR</Text>
@@ -604,7 +675,7 @@ const styles = StyleSheet.create({
   },
   contenido: {
     padding: espacios.lg,
-    paddingBottom: 160,
+    paddingBottom: 250,
   },
   botonEscanear: {
     alignSelf: 'flex-start',
@@ -734,6 +805,34 @@ const styles = StyleSheet.create({
   },
   textoMetodoActivo: {
     color: '#FFFFFF',
+  },
+  cobroEfectivo: {
+    marginBottom: espacios.md,
+    paddingBottom: espacios.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8ECF5',
+  },
+  campoMonto: {
+    marginBottom: 0,
+  },
+  cambioFila: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: espacios.sm,
+  },
+  cambioEtiqueta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colores.textoSuave,
+  },
+  cambioMonto: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colores.exito,
+  },
+  cambioFalta: {
+    color: colores.error,
   },
   filaTotal: {
     flexDirection: 'row',

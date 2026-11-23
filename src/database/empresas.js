@@ -40,7 +40,7 @@ export async function registrarEmpresa({
   }
 
   const db = await obtenerBD();
-  const usuario = await db.getFirstAsync('SELECT id FROM usuarios WHERE id = ?', propietario);
+  const usuario = await db.getFirstAsync('SELECT id, correo FROM usuarios WHERE id = ?', propietario);
   if (!usuario) {
     throw new Error('Tu cuenta ya no existe. Cierra sesión y regístrate nuevamente.');
   }
@@ -55,11 +55,12 @@ export async function registrarEmpresa({
       await ejecutarTransaccion(db, async (txn) => {
         const resEmpresa = await txn.runAsync(
           `INSERT INTO empresas
-             (nombre, direccion, telefono, codigo_vinculacion, codigo_privado, estado, propietario_id)
-           VALUES (?, ?, ?, ?, ?, 'activo', ?)`,
+             (nombre, direccion, telefono, correo_contacto, codigo_vinculacion, codigo_privado, estado, propietario_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'activo', ?)`,
           nombreLimpio,
           normalizarTexto(direccion),
           normalizarTexto(telefono),
+          normalizarTexto(usuario.correo) || null,
           codigoPrivado,
           codigoPrivado,
           propietario
@@ -79,6 +80,7 @@ export async function registrarEmpresa({
           nombre: nombreLimpio,
           direccion: normalizarTexto(direccion),
           telefono: normalizarTexto(telefono),
+          correo_contacto: normalizarTexto(usuario.correo) || null,
           codigo_vinculacion: codigoPrivado,
           codigo_privado: codigoPrivado,
           rol: 'admin',

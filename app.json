@@ -18,7 +18,15 @@
           "barcodeScannerEnabled": true
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NexCash usa tus fotos para mostrar la foto de perfil y de los productos.",
+          "cameraPermission": "NexCash usa la cámara para tomar la foto de perfil y de los productos.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true

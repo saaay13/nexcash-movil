@@ -80,12 +80,12 @@ export async function iniciarSesion(correo, password) {
 export async function obtenerUsuarioPorId(id) {
   const db = await obtenerBD();
   return db.getFirstAsync(
-    'SELECT id, nombre, correo, telefono, rol, creado_en FROM usuarios WHERE id = ?',
+    'SELECT id, nombre, correo, telefono, foto_perfil, rol, creado_en FROM usuarios WHERE id = ?',
     Number(id)
   );
 }
 
-export async function actualizarPerfil({ id, nombre, correo, telefono }) {
+export async function actualizarPerfil({ id, nombre, correo, telefono, fotoPerfil }) {
   const nombreLimpio = String(nombre ?? '').trim();
   if (!nombreLimpio) {
     throw new Error('El nombre es obligatorio.');
@@ -99,10 +99,13 @@ export async function actualizarPerfil({ id, nombre, correo, telefono }) {
   const db = await obtenerBD();
   try {
     await db.runAsync(
-      'UPDATE usuarios SET nombre = ?, correo = ?, telefono = ? WHERE id = ?',
+      `UPDATE usuarios
+       SET nombre = ?, correo = ?, telefono = ?, foto_perfil = COALESCE(?, foto_perfil)
+       WHERE id = ?`,
       nombreLimpio,
       correoLimpio,
       String(telefono ?? '').trim() || null,
+      fotoPerfil ?? null,
       Number(id)
     );
   } catch (error) {

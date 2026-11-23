@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -16,13 +17,13 @@ import { Pantalla } from '../components/templates';
 import { colores, espacios, radios } from '../theme';
 import {
   agregarProducto,
+  cambiarEstadoProducto,
   modificarProducto,
-  eliminarProducto,
   mensajeError,
   obtenerCategorias,
 } from '../database';
 import { useSesion } from '../context';
-import { consultarProductoPorCodigo } from '../services';
+import { consultarProductoPorCodigo, elegirImagen } from '../services';
 
 export default function ProductoFormScreen() {
   const navigation = useNavigation();
@@ -53,6 +54,8 @@ export default function ProductoFormScreen() {
   const [stockMinimo, setStockMinimo] = useState(
     producto ? String(producto.stock_minimo ?? 5) : '5'
   );
+  const [imagen, setImagen] = useState(producto?.imagen ?? null);
+  const [cargandoFoto, setCargandoFoto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [escaneoVisible, setEscaneoVisible] = useState(false);
@@ -72,6 +75,9 @@ export default function ProductoFormScreen() {
   function cerrarDialogo() {
     setDialogo((d) => ({ ...d, visible: false }));
   }
+
+  const estaInactivo =
+    (producto?.estado ?? (Number(producto?.activo) === 0 ? 'inactivo' : 'activo')) === 'inactivo';
 
   const cargarCategorias = useCallback(async () => {
     if (!empresaId) {
@@ -104,6 +110,28 @@ export default function ProductoFormScreen() {
     setCategoriaId(cat.id);
     setCategoria(cat.nombre);
     setSelectorVisible(false);
+  }
+
+  async function elegirFotoProducto() {
+    if (cargando || cargandoFoto) return;
+
+    setCargandoFoto(true);
+    try {
+      const uri = await elegirImagen({ prefijo: 'producto' });
+      if (uri) setImagen(uri);
+    } catch (e) {
+      setDialogo({
+        visible: true,
+        tipo: 'advertencia',
+        titulo: 'No se pudo guardar la foto',
+        mensaje: mensajeError(e, 'Intenta nuevamente.'),
+        textoConfirmar: 'Entendido',
+        textoCancelar: null,
+        onConfirmar: cerrarDialogo,
+      });
+    } finally {
+      setCargandoFoto(false);
+    }
   }
 
   async function guardar() {
@@ -149,6 +177,7 @@ export default function ProductoFormScreen() {
         precio: precioNum,
         stock: stockNum,
         stockMinimo: minimoNum,
+        imagen,
       };
 
       if (producto?.id) {
@@ -195,28 +224,36 @@ export default function ProductoFormScreen() {
     }
   }
 
-  function confirmarEliminar() {
+  function confirmarCambioEstado() {
     setDialogo({
       visible: true,
-      tipo: 'peligro',
-      titulo: '¿Eliminar producto?',
-      mensaje: `¿Estás seguro de que deseas quitar "${nombre}" del catálogo? Esta acción no se puede deshacer.`,
-      textoConfirmar: 'Eliminar',
+      tipo: estaInactivo ? 'exito' : 'peligro',
+      titulo: estaInactivo ? '¿Habilitar producto?' : '¿Deshabilitar producto?',
+      mensaje: estaInactivo
+        ? `"${nombre}" volverá a estar disponible para la venta.`
+        : `"${nombre}" dejará de estar disponible para la venta. Podrás habilitarlo nuevamente cuando quieras.`,
+      textoConfirmar: estaInactivo ? 'Habilitar' : 'Deshabilitar',
       textoCancelar: 'Cancelar',
-      onConfirmar: ejecutarEliminar,
+      onConfirmar: ejecutarCambioEstado,
       onCancelar: cerrarDialogo,
     });
   }
 
-  async function ejecutarEliminar() {
+  async function ejecutarCambioEstado() {
     try {
       setCargando(true);
-      await eliminarProducto(producto.id, empresaId);
+      await cambiarEstadoProducto(
+        producto.id,
+        estaInactivo ? 'activo' : 'inactivo',
+        empresaId
+      );
       setDialogo({
         visible: true,
         tipo: 'exito',
-        titulo: 'Producto eliminado',
-        mensaje: 'El producto fue retirado de tu catálogo correctamente.',
+        titulo: estaInactivo ? 'Producto habilitado' : 'Producto deshabilitado',
+        mensaje: estaInactivo
+          ? 'El producto ya está disponible para la venta.'
+          : 'El producto ya no aparecerá para vender, pero seguirá en tu catálogo.',
         textoConfirmar: 'Aceptar',
         textoCancelar: null,
         onConfirmar: () => {
@@ -228,8 +265,8 @@ export default function ProductoFormScreen() {
       setDialogo({
         visible: true,
         tipo: 'advertencia',
-        titulo: 'Error al eliminar',
-        mensaje: mensajeError(err, 'No se pudo eliminar el producto.'),
+        titulo: 'No se pudo cambiar el estado',
+        mensaje: mensajeError(err, 'No se pudo actualizar el producto.'),
         textoConfirmar: 'Entendido',
         textoCancelar: null,
         onConfirmar: cerrarDialogo,
@@ -309,6 +346,32 @@ export default function ProductoFormScreen() {
                 : 'Registra nombre, precio y existencia para venderlo.'}
           </Text>
         </View>
+      </View>
+
+      <View style={styles.fotoBloque}>
+        <Text style={styles.categoriaEtiqueta}>Foto del producto (opcional)</Text>
+        <Pressable
+          style={styles.fotoBoton}
+          onPress={elegirFotoProducto}
+          disabled={cargando || cargandoFoto}
+          accessibilityLabel={imagen ? 'Cambiar foto del producto' : 'Agregar foto del producto'}
+        >
+          {imagen ? (
+            <Image source={{ uri: imagen }} style={styles.fotoImagen} />
+          ) : (
+            <Ionicons name="camera-outline" size={24} color={colores.primarioContenedor} />
+          )}
+          <View style={styles.fotoAccion}>
+            <Ionicons name="camera-outline" size={13} color="#FFFFFF" />
+          </View>
+        </Pressable>
+        <Text style={styles.fotoAyuda}>
+          {cargandoFoto
+            ? 'Guardando foto...'
+            : imagen
+              ? 'Toca la foto para elegir otra.'
+              : 'Agrega una foto para identificarlo más rápido.'}
+        </Text>
       </View>
 
       <Campo
@@ -432,11 +495,17 @@ export default function ProductoFormScreen() {
       {producto?.id ? (
         <View style={{ marginTop: espacios.md }}>
           <Boton
-            titulo={cargando ? 'Eliminando...' : 'Eliminar producto'}
-            icono="trash-outline"
-            variante="peligro"
+            titulo={
+              estaInactivo
+                ? 'Habilitar producto'
+                : cargando
+                  ? 'Deshabilitando...'
+                  : 'Deshabilitar producto'
+            }
+            icono={estaInactivo ? 'eye-outline' : 'eye-off-outline'}
+            variante={estaInactivo ? 'tonal' : 'peligro'}
             deshabilitado={cargando}
-            onPress={confirmarEliminar}
+            onPress={confirmarCambioEstado}
           />
         </View>
       ) : null}
@@ -583,6 +652,44 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colores.textoSuave,
     marginTop: 2,
+  },
+  fotoBloque: {
+    marginBottom: espacios.md,
+  },
+  fotoBoton: {
+    width: 92,
+    height: 92,
+    borderRadius: radios.xl,
+    borderWidth: 1.5,
+    borderColor: colores.contornoSuave,
+    backgroundColor: colores.superficieBaja,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  fotoImagen: {
+    width: '100%',
+    height: '100%',
+  },
+  fotoAccion: {
+    position: 'absolute',
+    right: 4,
+    bottom: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.terciario,
+    borderWidth: 2,
+    borderColor: colores.superficie,
+  },
+  fotoAyuda: {
+    fontSize: 11,
+    color: colores.textoSuave,
+    marginTop: 6,
+    marginLeft: 2,
   },
   categoriaBloque: {
     marginBottom: espacios.md,

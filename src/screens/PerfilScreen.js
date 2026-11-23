@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { DialogoConfirmacion } from '../components/molecules';
 import { Pantalla } from '../components/templates';
 import { colores, espacios, radios, sombras } from '../theme';
 import { actualizarPerfil, mensajeError } from '../database';
+import { elegirImagen } from '../services';
 import { useSesion } from '../context';
 
 export default function PerfilScreen() {
@@ -19,6 +20,7 @@ export default function PerfilScreen() {
   const [nombre, setNombre] = useState(usuario?.nombre ?? '');
   const [correo, setCorreo] = useState(usuario?.correo ?? '');
   const [telefono, setTelefono] = useState(usuario?.telefono ?? '');
+  const [fotoPerfil, setFotoPerfil] = useState(usuario?.foto_perfil ?? null);
   const [dialogo, setDialogo] = useState({
     visible: false,
     tipo: 'info',
@@ -57,12 +59,39 @@ export default function PerfilScreen() {
         nombre,
         correo,
         telefono,
+        fotoPerfil,
       });
       actualizarUsuario(datos);
+      setFotoPerfil(datos?.foto_perfil ?? null);
       setEditando(false);
       aviso('exito', 'Perfil actualizado', 'Tus datos se guardaron correctamente.');
     } catch (e) {
       aviso('advertencia', 'No se pudo guardar', mensajeError(e, 'Revisa los datos e intenta de nuevo.'));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function cambiarFoto() {
+    if (!usuario?.id || guardando) return;
+
+    setGuardando(true);
+    try {
+      const uri = await elegirImagen({ prefijo: 'perfil', aspecto: [1, 1] });
+      if (!uri) return;
+
+      const datos = await actualizarPerfil({
+        id: usuario.id,
+        nombre,
+        correo,
+        telefono,
+        fotoPerfil: uri,
+      });
+      actualizarUsuario(datos);
+      setFotoPerfil(datos?.foto_perfil ?? uri);
+      aviso('exito', 'Foto actualizada', 'Tu foto de perfil se guardó correctamente.');
+    } catch (e) {
+      aviso('advertencia', 'No se pudo guardar la foto', mensajeError(e, 'Intenta nuevamente.'));
     } finally {
       setGuardando(false);
     }
@@ -105,9 +134,22 @@ export default function PerfilScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.tarjetaPerfil}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarTexto}>{iniciales || 'U'}</Text>
-        </View>
+        <Pressable
+          onPress={cambiarFoto}
+          accessibilityLabel="Cambiar foto de perfil"
+          style={styles.avatarBoton}
+        >
+          <View style={styles.avatar}>
+            {fotoPerfil ? (
+              <Image source={{ uri: fotoPerfil }} style={styles.avatarImagen} />
+            ) : (
+              <Text style={styles.avatarTexto}>{iniciales || 'U'}</Text>
+            )}
+          </View>
+          <View style={styles.avatarCamara}>
+            <Ionicons name="camera-outline" size={13} color="#FFFFFF" />
+          </View>
+        </Pressable>
         <View style={styles.datosPerfil}>
           <Text style={styles.nombre} numberOfLines={1}>
             {usuario?.nombre || 'Usuario'}
@@ -168,6 +210,7 @@ export default function PerfilScreen() {
                   setNombre(usuario?.nombre ?? '');
                   setCorreo(usuario?.correo ?? '');
                   setTelefono(usuario?.telefono ?? '');
+                  setFotoPerfil(usuario?.foto_perfil ?? null);
                   setEditando(false);
                 }}
                 style={styles.botonMedio}
@@ -208,6 +251,10 @@ export default function PerfilScreen() {
           {empresa?.telefono ? (
             <FilaDato etiqueta="Teléfono" valor={empresa.telefono} />
           ) : null}
+          <FilaDato
+            etiqueta="Correo de la empresa"
+            valor={empresa?.correo_contacto || 'No registrado'}
+          />
         </View>
       </View>
 
@@ -219,6 +266,12 @@ export default function PerfilScreen() {
           </View>
         </View>
 
+        <Opcion
+          icono="camera-outline"
+          titulo="Cambiar foto de perfil"
+          detalle="Elige una foto de tu galería o toma una nueva"
+          onPress={cambiarFoto}
+        />
         <Opcion
           icono="business-outline"
           titulo="Cambiar de empresa"
@@ -287,6 +340,9 @@ const styles = StyleSheet.create({
     marginBottom: espacios.md,
     ...sombras.flotante,
   },
+  avatarBoton: {
+    position: 'relative',
+  },
   avatar: {
     width: 62,
     height: 62,
@@ -296,6 +352,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
+    overflow: 'hidden',
+  },
+  avatarImagen: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarCamara: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.terciarioContenedor,
+    borderWidth: 2,
+    borderColor: '#00539A',
   },
   avatarTexto: {
     color: '#FFFFFF',

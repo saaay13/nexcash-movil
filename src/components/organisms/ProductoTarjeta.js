@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bs, colores, espacios, radios, sombras, tipografia } from '../../theme';
 import SelectorCantidad from '../molecules/SelectorCantidad';
@@ -16,6 +16,8 @@ export default function ProductoTarjeta({
   const stock = producto.stock ?? producto.stock_actual ?? 0;
   const stockMinimo = producto.stock_minimo ?? 5;
   const esCritico = stock <= stockMinimo;
+  const estado = producto.estado ?? (Number(producto.activo) === 0 ? 'inactivo' : 'activo');
+  const estaInactivo = estado === 'inactivo';
 
   return (
     <Pressable
@@ -31,7 +33,11 @@ export default function ProductoTarjeta({
             { backgroundColor: producto.color ?? colores.superficieBaja },
           ]}
         >
-          <Ionicons name="cube-outline" size={24} color="#FFFFFF" />
+          {producto.imagen ? (
+            <Image source={{ uri: producto.imagen }} style={styles.miniaturaImagen} />
+          ) : (
+            <Ionicons name="cube-outline" size={24} color="#FFFFFF" />
+          )}
         </View>
 
         <View style={styles.info}>
@@ -40,6 +46,12 @@ export default function ProductoTarjeta({
           </Text>
 
           <View style={styles.metaFila}>
+            {estaInactivo ? (
+              <>
+                <Etiqueta texto="Inactivo" variante="error" punto />
+                <Text style={styles.punto}>·</Text>
+              </>
+            ) : null}
             <Text style={styles.sku}>{producto.sku ?? producto.codigo_barras ?? 'PROD'}</Text>
             {producto.unidad ? (
               <>
@@ -73,13 +85,19 @@ export default function ProductoTarjeta({
       </View>
 
       <View style={styles.pieFila}>
-        <SelectorCantidad valor={cantidad} onRestar={onRestar} onSumar={onSumar} />
+        <SelectorCantidad
+          valor={cantidad}
+          onRestar={onRestar}
+          onSumar={onSumar}
+          deshabilitado={estaInactivo}
+        />
 
         <Boton
-          titulo={cantidad > 0 ? `Cobrar (${cantidad})` : 'Cobrar'}
-          icono="cart-outline"
+          titulo={estaInactivo ? 'No disponible' : cantidad > 0 ? `Cobrar (${cantidad})` : 'Cobrar'}
+          icono={estaInactivo ? 'eye-off-outline' : 'cart-outline'}
           tamano="sm"
-          variante={cantidad > 0 ? 'acento' : 'primario'}
+          variante={estaInactivo ? 'suave' : cantidad > 0 ? 'acento' : 'primario'}
+          deshabilitado={estaInactivo}
           onPress={onCobrar}
         />
       </View>
@@ -111,6 +129,11 @@ const styles = StyleSheet.create({
     borderRadius: radios.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  miniaturaImagen: {
+    width: '100%',
+    height: '100%',
   },
   info: {
     flex: 1,

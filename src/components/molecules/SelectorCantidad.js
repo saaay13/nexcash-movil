@@ -2,35 +2,46 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colores, radios, tipografia } from '../../theme';
 
-export default function SelectorCantidad({ valor, onRestar, onSumar, compacto = false }) {
+export default function SelectorCantidad({
+  valor,
+  onRestar,
+  onSumar,
+  compacto = false,
+  deshabilitado = false,
+}) {
   const tamano = compacto ? 30 : 34;
+  const colorIcono = deshabilitado ? colores.contorno : colores.primario;
 
   return (
     <View style={styles.contenedor}>
       <Pressable
-        onPress={onRestar}
+        onPress={deshabilitado ? undefined : onRestar}
+        disabled={deshabilitado}
         accessibilityLabel="Quitar una unidad"
         style={({ pressed }) => [
           styles.boton,
           { width: tamano, height: tamano },
-          pressed && styles.presionado,
+          deshabilitado && styles.botonDeshabilitado,
+          !deshabilitado && pressed && styles.presionado,
         ]}
       >
-        <Ionicons name="remove" size={16} color={colores.primario} />
+        <Ionicons name="remove" size={16} color={colorIcono} />
       </Pressable>
 
       <Text style={[styles.valor, compacto && styles.valorCompacto]}>{valor}</Text>
 
       <Pressable
-        onPress={onSumar}
+        onPress={deshabilitado ? undefined : onSumar}
+        disabled={deshabilitado}
         accessibilityLabel="Agregar una unidad"
         style={({ pressed }) => [
           styles.boton,
           { width: tamano, height: tamano },
-          pressed && styles.presionado,
+          deshabilitado && styles.botonDeshabilitado,
+          !deshabilitado && pressed && styles.presionado,
         ]}
       >
-        <Ionicons name="add" size={16} color={colores.primario} />
+        <Ionicons name="add" size={16} color={colorIcono} />
       </Pressable>
     </View>
   );
@@ -51,6 +62,10 @@ const styles = StyleSheet.create({
   presionado: {
     backgroundColor: colores.superficieMedia,
     transform: [{ scale: 0.94 }],
+  },
+  botonDeshabilitado: {
+    backgroundColor: colores.borde,
+    opacity: 0.7,
   },
   valor: {
     ...tipografia.numero,

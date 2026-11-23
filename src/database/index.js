@@ -160,6 +160,14 @@ export async function iniciarBD(dbExterna) {
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   await db.execAsync(ESQUEMA_TABLAS);
   await migrarColumnas(db);
+  await db.runAsync(
+    `UPDATE empresas
+     SET correo_contacto = (
+       SELECT u.correo FROM usuarios u WHERE u.id = empresas.propietario_id
+     )
+     WHERE (correo_contacto IS NULL OR correo_contacto = '')
+       AND propietario_id IS NOT NULL`
+  );
   await db.execAsync(INDICES);
 
   const fila = await db.getFirstAsync('PRAGMA user_version');

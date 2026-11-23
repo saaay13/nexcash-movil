@@ -10,7 +10,7 @@ import { bs, colores, espacios, radios, sombras } from '../theme';
 import { obtenerVentas } from '../database';
 import { useSesion } from '../context';
 
-const FILTROS = ['Todas', 'Efectivo', 'QR'];
+const FILTROS = ['Todas', 'Efectivo', 'QR', 'Anuladas'];
 
 export default function HistorialScreen() {
   const navigation = useNavigation();
@@ -28,7 +28,7 @@ export default function HistorialScreen() {
     }
     try {
       setCargando(true);
-      const listaDB = await obtenerVentas({ empresaId, limite: 100 });
+      const listaDB = await obtenerVentas({ empresaId, limite: 100, incluirAnuladas: true });
       setVentas(Array.isArray(listaDB) ? listaDB : []);
     } catch (error) {
       console.warn('Error al cargar historial de ventas SQLite:', error);
@@ -50,15 +50,24 @@ export default function HistorialScreen() {
       const metodo = (v.metodo_pago || v.metodo || '').toLowerCase();
       if (filtro === 'Efectivo') return metodo === 'efectivo';
       if (filtro === 'QR') return metodo === 'qr';
+      if (filtro === 'Anuladas') {
+        return String(v.estado ?? '').toLowerCase() === 'anulada';
+      }
       return true;
     });
   }, [ventas, filtro]);
 
-  const totalRecaudado = useMemo(() => {
-    return ventas.reduce((suma, v) => suma + Number(v.total || 0), 0);
-  }, [ventas]);
+  const ventasCompletadas = useMemo(
+    () => ventas.filter((v) => String(v.estado ?? 'completada').toLowerCase() !== 'anulada'),
+    [ventas]
+  );
 
-  const promedioVenta = ventas.length > 0 ? totalRecaudado / ventas.length : 0;
+  const totalRecaudado = useMemo(() => {
+    return ventasCompletadas.reduce((suma, v) => suma + Number(v.total || 0), 0);
+  }, [ventasCompletadas]);
+
+  const promedioVenta =
+    ventasCompletadas.length > 0 ? totalRecaudado / ventasCompletadas.length : 0;
 
   return (
     <>
@@ -83,7 +92,7 @@ export default function HistorialScreen() {
             <Text style={styles.resumenEtiqueta}>HISTORIAL DE VENTAS</Text>
           </View>
           <View style={styles.pillBlanca}>
-            <Text style={styles.pillTexto}>{ventas.length} tickets</Text>
+            <Text style={styles.pillTexto}>{ventasCompletadas.length} tickets</Text>
           </View>
         </View>
 
@@ -118,6 +127,7 @@ export default function HistorialScreen() {
       {listaFiltrada.map((venta) => {
         const metodo = (venta.metodo_pago || venta.metodo || 'efectivo').toLowerCase();
         const esQr = metodo === 'qr';
+        const anulada = String(venta.estado ?? '').toLowerCase() === 'anulada';
         const numeroFolio = String(venta.numero_venta ?? venta.numero ?? venta.id).padStart(3, '0');
         const hora = venta.creado_en ? venta.creado_en.substring(11, 16) : (venta.fecha ?? 'Hoy');
         const cantidadItems = venta.total_items ?? venta.items ?? 1;
@@ -152,9 +162,13 @@ export default function HistorialScreen() {
                 {bs(venta.total)}
               </Text>
               <View style={styles.estadoLinea}>
-                <Ionicons name="checkmark-circle" size={13} color={colores.exito} />
-                <Text style={styles.estado} numberOfLines={1}>
-                  Completado
+                <Ionicons
+                  name={anulada ? 'close-circle' : 'checkmark-circle'}
+                  size={13}
+                  color={anulada ? colores.error : colores.exito}
+                />
+                <Text style={[styles.estado, anulada && styles.estadoAnulada]} numberOfLines={1}>
+                  {anulada ? 'Anulada' : 'Completado'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colores.contornoSuave} />
@@ -170,7 +184,9 @@ export default function HistorialScreen() {
           <Text style={styles.vacioTexto}>
             {filtro === 'Todas'
               ? 'Realiza tu primera venta desde la pestaña "Vender".'
-              : `No se encontraron ventas pagadas con ${filtro}.`}
+              : filtro === 'Anuladas'
+                ? 'No hay ventas anuladas registradas.'
+                : `No se encontraron ventas pagadas con ${filtro}.`}
           </Text>
         </View>
       ) : null}
@@ -338,6 +354,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: colores.exito,
+  },
+  estadoAnulada: {
+    color: colores.error,
   },
   vacio: {
     alignItems: 'center',

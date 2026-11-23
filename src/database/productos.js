@@ -9,6 +9,15 @@ function empresaValida(empresaId) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function normalizarEstado(estado) {
+  if (estado === undefined || estado === null || estado === '') return 'activo';
+  const valor = String(estado).toLowerCase();
+  if (!['activo', 'inactivo'].includes(valor)) {
+    throw new Error('El estado del producto debe ser activo o inactivo.');
+  }
+  return valor;
+}
+
 export function validarProducto(p, { parcial = false } = {}) {
   if (!parcial || 'nombre' in p) {
     if (!p.nombre || !String(p.nombre).trim()) {
@@ -40,12 +49,13 @@ export async function crearProducto(p) {
   }
 
   validarProducto(p);
+  const estado = normalizarEstado(p.estado);
   const db = await obtenerBD();
   const resultado = await db.runAsync(
     `INSERT INTO productos
       (empresa_id, nombre, descripcion, categoria_id, categoria, codigo_barras,
-       precio_compra, precio_venta, stock_actual, stock_minimo, imagen, api_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       precio_compra, precio_venta, stock_actual, stock_minimo, imagen, estado, activo, api_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     empresaId,
     String(p.nombre).trim(),
     p.descripcion ? String(p.descripcion).trim() : null,
@@ -57,6 +67,8 @@ export async function crearProducto(p) {
     Number(p.stock_actual ?? 0),
     Number(p.stock_minimo ?? 5),
     p.imagen ? String(p.imagen).trim() : null,
+    estado,
+    estado === 'activo' ? 1 : 0,
     p.api_id ? Number(p.api_id) : null
   );
 
@@ -71,6 +83,9 @@ export async function crearProducto(p) {
     precio: Number(p.precio_venta),
     stock: Number(p.stock_actual ?? 0),
     stock_minimo: Number(p.stock_minimo ?? 5),
+    imagen: p.imagen ? String(p.imagen).trim() : null,
+    estado,
+    activo: estado === 'activo' ? 1 : 0,
   };
 }
 
@@ -85,6 +100,7 @@ export async function agregarProducto({
   stock = 0,
   stockMinimo = 5,
   precioCompra = 0,
+  imagen = null,
 }) {
   return crearProducto({
     empresaId,
@@ -97,6 +113,7 @@ export async function agregarProducto({
     precio_venta: precio,
     stock_actual: stock,
     stock_minimo: stockMinimo,
+    imagen,
   });
 }
 
@@ -116,6 +133,7 @@ export async function obtenerProductos({
 
   if (!incluirInactivos) {
     condiciones.push('p.activo = 1');
+    condiciones.push("p.estado = 'activo'");
   }
 
   if (categoria && categoria !== 'Todos' && categoria !== 'Critico') {
@@ -178,6 +196,7 @@ export async function obtenerProductoPorCodigo(codigo, empresaId) {
      FROM productos
      WHERE empresa_id = ?
        AND activo = 1
+       AND estado = 'activo'
        AND codigo_barras = ? COLLATE NOCASE
      LIMIT 1`,
     empresa,
@@ -187,6 +206,16 @@ export async function obtenerProductoPorCodigo(codigo, empresaId) {
 
 export async function actualizarProducto(id, cambios, empresaId) {
   validarProducto(cambios, { parcial: true });
+  const cambiosNormalizados = { ...cambios };
+
+  if ('estado' in cambiosNormalizados) {
+    const estado = normalizarEstado(cambiosNormalizados.estado);
+    cambiosNormalizados.estado = estado;
+    cambiosNormalizados.activo = estado === 'activo' ? 1 : 0;
+  } else if ('activo' in cambiosNormalizados) {
+    cambiosNormalizados.estado = Number(cambiosNormalizados.activo) ? 'activo' : 'inactivo';
+  }
+
   const camposPermitidos = [
     'nombre',
     'descripcion',
@@ -198,6 +227,7 @@ export async function actualizarProducto(id, cambios, empresaId) {
     'stock_actual',
     'stock_minimo',
     'imagen',
+    'estado',
     'activo',
   ];
 
@@ -205,9 +235,9 @@ export async function actualizarProducto(id, cambios, empresaId) {
   const valores = [];
 
   for (const campo of camposPermitidos) {
-    if (campo in cambios) {
+    if (campo in cambiosNormalizados) {
       asignaciones.push(`${campo} = ?`);
-      valores.push(cambios[campo]);
+      valores.push(cambiosNormalizados[campo]);
     }
   }
 
@@ -239,6 +269,7 @@ export async function modificarProducto(
     precio,
     stock,
     stockMinimo = 5,
+    imagen = null,
   },
   empresaId
 ) {
@@ -255,6 +286,7 @@ export async function modificarProducto(
       precio_venta: Number(precio),
       stock_actual: Number(stock),
       stock_minimo: Number(stockMinimo),
+      imagen: imagen ?? null,
     },
     empresaId
   );
@@ -269,29 +301,33 @@ export async function modificarProducto(
     precio,
     stock,
     stockMinimo,
+    imagen: imagen ?? null,
   };
 }
 
-export async function eliminarProducto(id, empresaId) {
+export async function cambiarEstadoProducto(id, estado, empresaId) {
   if (!id) throw new Error('ID de producto no válido.');
 
+  const estadoNormalizado = normalizarEstado(estado);
   const empresa = empresaValida(empresaId);
   const db = await obtenerBD();
 
   if (empresa) {
     await db.runAsync(
-      'UPDATE productos SET activo = 0, estado = ? WHERE id = ? AND empresa_id = ?',
-      'inactivo',
+      'UPDATE productos SET activo = ?, estado = ? WHERE id = ? AND empresa_id = ?',
+      estadoNormalizado === 'activo' ? 1 : 0,
+      estadoNormalizado,
       Number(id),
       empresa
     );
   } else {
     await db.runAsync(
-      'UPDATE productos SET activo = 0, estado = ? WHERE id = ?',
-      'inactivo',
+      'UPDATE productos SET activo = ?, estado = ? WHERE id = ?',
+      estadoNormalizado === 'activo' ? 1 : 0,
+      estadoNormalizado,
       Number(id)
     );
   }
 
-  return { id, eliminado: true };
+  return { id: Number(id), estado: estadoNormalizado };
 }
