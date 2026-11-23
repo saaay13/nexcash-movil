@@ -137,13 +137,9 @@ export default function HistorialScreen() {
               <Text style={styles.nombre} numberOfLines={1}>
                 {nombreProducto}
               </Text>
-              <View style={styles.meta}>
-                <Text style={styles.metaTexto}>{hora}</Text>
-                <Text style={styles.punto}>·</Text>
-                <Text style={styles.metaTexto}>{cantidadItems} un.</Text>
-                <Text style={styles.punto}>·</Text>
-                <Text style={styles.metaTexto}>{venta.vendedor ?? 'Admin'}</Text>
-              </View>
+              <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">
+                {`${hora} · ${cantidadItems} un. · ${venta.vendedor ?? 'Admin'}`}
+              </Text>
               <View style={[styles.metodoTag, esQr ? styles.metodoQr : styles.metodoEfectivo]}>
                 <Text style={[styles.metodoTexto, esQr ? styles.textoQr : styles.textoEfectivo]}>
                   {esQr ? 'QR Simple' : 'Efectivo'}
@@ -294,18 +290,10 @@ const styles = StyleSheet.create({
     color: colores.texto,
   },
   meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  metaTexto: {
     fontSize: 11,
     color: colores.textoSuave,
-  },
-  punto: {
-    color: colores.contorno,
-    fontSize: 10,
+    marginTop: 2,
+    flexShrink: 1,
   },
   metodoTag: {
     alignSelf: 'flex-start',
