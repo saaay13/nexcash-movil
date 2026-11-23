@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Consulta y descarga el comprobante de tu compra en NexCash." />
+    <title>Ticket de compra | NexCash</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --azul: #00539a;
+        --azul-claro: #eaf3fb;
+        --texto: #1b1b1b;
+        --suave: #6b7280;
+        --borde: #e5e7eb;
+        --fondo: #f5f7fa;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--fondo);
+        color: var(--texto);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        line-height: 1.5;
+        padding: 24px 16px 48px;
+      }
+
+      .tarjeta {
+        max-width: 520px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+      }
+
+      .marca {
+        background: linear-gradient(135deg, var(--azul), #156eb4);
+        color: #fff;
+        padding: 26px 24px;
+        text-align: center;
+      }
+
+      .marca h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; }
+      .marca p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+
+      .cuerpo { padding: 24px; }
+
+      .estado {
+        text-align: center;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        background: var(--azul-claro);
+        color: var(--azul);
+        margin-bottom: 20px;
+      }
+
+      .estado.error { background: #fee2e2; color: #b91c1c; }
+
+      .encabezado-ticket { text-align: center; margin-bottom: 18px; }
+      .encabezado-ticket h2 { margin: 0 0 4px; font-size: 20px; }
+      .encabezado-ticket span { color: var(--suave); font-size: 13px; }
+
+      .datos {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .dato { border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px; }
+      .dato small { display: block; color: var(--suave); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+      .dato strong { font-size: 14px; }
+
+      table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+      th {
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--suave);
+        border-bottom: 1px solid var(--borde);
+        padding: 8px 4px;
+      }
+      td { font-size: 13px; padding: 9px 4px; border-bottom: 1px solid #f1f3f6; vertical-align: top; }
+      .numero { text-align: right; white-space: nowrap; }
+      .detalle { color: var(--suave); font-size: 11px; display: block; }
+
+      .totales { margin-left: auto; width: 100%; max-width: 240px; }
+      .fila-total { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; }
+      .fila-total span:first-child { color: var(--suave); }
+      .gran-total {
+        margin-top: 8px;
+        padding-top: 10px;
+        border-top: 2px solid var(--azul);
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--azul);
+      }
+      .gran-total span:first-child { color: var(--azul); }
+
+      .boton {
+        display: block;
+        width: 100%;
+        margin-top: 24px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--azul);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 14px 18px;
+        cursor: pointer;
+      }
+      .boton:hover { background: #00457a; }
+      .boton:disabled { background: #9ca3af; cursor: not-allowed; }
+
+      .pie { text-align: center; color: var(--suave); font-size: 12px; margin-top: 18px; }
+
+      @media (max-width: 420px) {
+        .datos { grid-template-columns: 1fr; }
+        .cuerpo { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="tarjeta">
+      <header class="marca">
+        <h1>NexCash</h1>
+        <p>Comprobante de compra</p>
+      </header>
+
+      <div class="cuerpo">
+        <div id="estado" class="estado">Leyendo el ticket...</div>
+
+        <div id="contenido" hidden>
+          <div class="encabezado-ticket">
+            <h2 id="numero"></h2>
+            <span id="empresa"></span>
+          </div>
+
+          <section class="datos">
+            <div class="dato"><small>Fecha</small><strong id="fecha"></strong></div>
+            <div class="dato"><small>Método de pago</small><strong id="metodo"></strong></div>
+            <div class="dato"><small>Atendido por</small><strong id="vendedor"></strong></div>
+            <div class="dato"><small>Productos</small><strong id="cantidad"></strong></div>
+          </section>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th class="numero">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="items"></tbody>
+          </table>
+
+          <section class="totales">
+            <div class="fila-total"><span>Subtotal</span><strong id="subtotal"></strong></div>
+            <div class="fila-total"><span>Descuento</span><strong id="descuento"></strong></div>
+            <div class="fila-total gran-total"><span>Total</span><strong id="total"></strong></div>
+          </section>
+
+          <button id="descargar" class="boton" type="button">Descargar PDF</button>
+          <p class="pie">Gracias por comprar con NexCash.</p>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script>
+      (function () {
+        'use strict';
+
+        var estado = document.getElementById('estado');
+        var contenido = document.getElementById('contenido');
+        var boton = document.getElementById('descargar');
+        var ticket = null;
+
+        function texto(valor) {
+          return String(valor == null ? '' : valor);
+        }
+
+        function seguro(valor) {
+          return texto(valor).replace(/[^\u0000-\u00FF]/g, '?');
+        }
+
+        function bs(valor) {
+          return 'Bs ' + Number(valor || 0).toFixed(2);
+        }
+
+        function mostrarError(mensaje) {
+          estado.textContent = mensaje;
+          estado.classList.add('error');
+          contenido.hidden = true;
+        }
+
+        function leerTicket() {
+          var comprimido = new URLSearchParams(window.location.search).get('d');
+          if (!comprimido) {
+            mostrarError('El enlace del ticket no es válido. Solicita un nuevo comprobante en la tienda.');
+            return null;
+          }
+          if (typeof LZString === 'undefined') {
+            mostrarError('No se pudo cargar el lector del ticket. Revisa tu conexión e intenta nuevamente.');
+            return null;
+          }
+          try {
+            var json = LZString.decompressFromEncodedURIComponent(comprimido);
+            if (!json) throw new Error('vacio');
+            var datos = JSON.parse(json);
+            if (!datos || !datos.numero || !Array.isArray(datos.items)) {
+              throw new Error('formato');
+            }
+            return datos;
+          } catch (error) {
+            mostrarError('No se pudo leer el ticket. Pide al vendedor que genere uno nuevo.');
+            return null;
+          }
+        }
+
+        function poner(id, valor) {
+          document.getElementById(id).textContent = texto(valor);
+        }
+
+        function renderizar(datos) {
+          ticket = datos;
+          estado.hidden = true;
+
+          poner('numero', 'Ticket #' + String(datos.numero).padStart(3, '0'));
+          poner('empresa', texto(datos.empresa || 'NexCash'));
+          poner('fecha', texto(datos.fecha || '-'));
+          poner('metodo', texto(datos.metodo || '-'));
+          poner('vendedor', texto(datos.vendedor || '-'));
+
+          var unidades = datos.items.reduce(function (suma, item) {
+            return suma + Number(item.cantidad || 0);
+          }, 0);
+          poner('cantidad', unidades + (unidades === 1 ? ' unidad' : ' unidades'));
+
+          var tbody = document.getElementById('items');
+          tbody.innerHTML = '';
+          datos.items.forEach(function (item) {
+            var fila = document.createElement('tr');
+
+            var nombre = document.createElement('td');
+            var etiqueta = document.createElement('strong');
+            etiqueta.textContent = texto(item.nombre || 'Producto');
+            nombre.appendChild(etiqueta);
+
+            var detalle = document.createElement('span');
+            detalle.className = 'detalle';
+            detalle.textContent = Number(item.cantidad || 0) + ' x ' + bs(item.precio);
+            nombre.appendChild(detalle);
+            fila.appendChild(nombre);
+
+            var subtotal = document.createElement('td');
+            subtotal.className = 'numero';
+            subtotal.textContent = bs(item.subtotal);
+            fila.appendChild(subtotal);
+
+            tbody.appendChild(fila);
+          });
+
+          poner('subtotal', bs(datos.subtotal));
+          poner('descuento', bs(datos.descuento));
+          poner('total', bs(datos.total));
+
+          contenido.hidden = false;
+
+          if (typeof window.jspdf === 'undefined') {
+            boton.disabled = true;
+            boton.textContent = 'PDF no disponible sin conexión';
+          }
+        }
+
+        function generarPdf() {
+          if (!ticket || !window.jspdf) return;
+
+          try {
+            var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+            var ancho = doc.internal.pageSize.getWidth();
+            var centro = ancho / 2;
+            var y = 22;
+
+            function linea(valor, tamano, negrita, alineacion, salto) {
+              doc.setFont('helvetica', negrita ? 'bold' : 'normal');
+              doc.setFontSize(tamano);
+              doc.text(seguro(valor), alineacion === 'derecha' ? ancho - 20 : (alineacion === 'centro' ? centro : 20), y, {
+                align: alineacion === 'derecha' ? 'right' : (alineacion === 'centro' ? 'center' : 'left')
+              });
+              y += salto || 7;
+            }
+
+            linea('NexCash', 22, true, 'centro', 9);
+            linea(seguro(ticket.empresa || 'NexCash'), 12, false, 'centro', 8);
+            linea('COMPROBANTE DE COMPRA', 10, true, 'centro', 12);
+            linea('Ticket #' + String(ticket.numero).padStart(3, '0'), 12, true, 'centro', 7);
+
+            doc.setDrawColor(200, 205, 212);
+            doc.line(20, y, ancho - 20, y);
+            y += 9;
+
+            linea('Fecha: ' + seguro(ticket.fecha), 10, false, 'izquierda', 6);
+            linea('Metodo de pago: ' + seguro(ticket.metodo), 10, false, 'izquierda', 6);
+            linea('Atendido por: ' + seguro(ticket.vendedor), 10, false, 'izquierda', 11);
+
+            doc.setDrawColor(200, 205, 212);
+            doc.line(20, y, ancho - 20, y);
+            y += 9;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('PRODUCTO', 20, y);
+            doc.text('SUBTOTAL', ancho - 20, y, { align: 'right' });
+            y += 4;
+            doc.line(20, y, ancho - 20, y);
+            y += 8;
+
+            doc.setFont('helvetica', 'normal');
+            ticket.items.forEach(function (item) {
+              if (y > 260) {
+                doc.addPage();
+                y = 22;
+              }
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(10);
+              doc.text(seguro(item.nombre || 'Producto'), 20, y);
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9);
+              doc.text(seguro(Number(item.cantidad || 0) + ' x ' + bs(item.precio)), 20, y + 5);
+
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(10);
+              doc.text(seguro(bs(item.subtotal)), ancho - 20, y, { align: 'right' });
+              y += 13;
+            });
+
+            doc.line(20, y, ancho - 20, y);
+            y += 9;
+
+            function total(valor, etiqueta, destacado) {
+              doc.setFont('helvetica', destacado ? 'bold' : 'normal');
+              doc.setFontSize(destacado ? 13 : 10);
+              if (destacado) doc.setTextColor(0, 83, 154);
+              doc.text(seguro(etiqueta), 20, y);
+              doc.text(seguro(valor), ancho - 20, y, { align: 'right' });
+              if (destacado) doc.setTextColor(27, 27, 27);
+              y += destacado ? 14 : 7;
+            }
+
+            total(bs(ticket.subtotal), 'Subtotal', false);
+            total(bs(ticket.descuento), 'Descuento', false);
+            total(bs(ticket.total), 'TOTAL', true);
+
+            y += 8;
+            linea('Gracias por comprar con NexCash.', 10, false, 'centro', 6);
+
+            doc.save('Ticket-' + String(ticket.numero).padStart(3, '0') + '.pdf');
+          } catch (error) {
+            window.alert('No se pudo generar el PDF. Intenta nuevamente.');
+          }
+        }
+
+        boton.addEventListener('click', generarPdf);
+        var datosTicket = leerTicket();
+        if (datosTicket) renderizar(datosTicket);
+      })();
+    </script>
+  </body>
+</html>

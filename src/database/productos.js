@@ -43,11 +43,12 @@ export async function crearProducto(p) {
   const db = await obtenerBD();
   const resultado = await db.runAsync(
     `INSERT INTO productos
-      (empresa_id, nombre, categoria, codigo_barras, precio_compra, precio_venta,
+      (empresa_id, nombre, categoria_id, categoria, codigo_barras, precio_compra, precio_venta,
        stock_actual, stock_minimo, imagen, api_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     empresaId,
     String(p.nombre).trim(),
+    p.categoriaId ?? p.categoria_id ?? null,
     p.categoria ? String(p.categoria).trim() : null,
     p.codigo_barras ? String(p.codigo_barras).trim() : null,
     Number(p.precio_compra ?? 0),
@@ -62,6 +63,7 @@ export async function crearProducto(p) {
     id: resultado.lastInsertRowId,
     empresa_id: empresaId,
     nombre: String(p.nombre).trim(),
+    categoria_id: p.categoriaId ?? p.categoria_id ?? null,
     categoria: p.categoria ?? null,
     sku: p.codigo_barras ?? null,
     precio: Number(p.precio_venta),
@@ -74,6 +76,7 @@ export async function agregarProducto({
   empresaId,
   nombre,
   categoria = 'General',
+  categoriaId = null,
   sku = '',
   precio = 0,
   stock = 0,
@@ -84,6 +87,7 @@ export async function agregarProducto({
     empresaId,
     nombre,
     categoria,
+    categoriaId,
     codigo_barras: sku,
     precio_compra: precioCompra,
     precio_venta: precio,
@@ -181,6 +185,7 @@ export async function actualizarProducto(id, cambios, empresaId) {
   validarProducto(cambios, { parcial: true });
   const camposPermitidos = [
     'nombre',
+    'categoria_id',
     'categoria',
     'codigo_barras',
     'precio_compra',
@@ -218,13 +223,18 @@ export async function actualizarProducto(id, cambios, empresaId) {
   );
 }
 
-export async function modificarProducto(id, { nombre, categoria, sku, precio, stock }, empresaId) {
+export async function modificarProducto(
+  id,
+  { nombre, categoria, categoriaId = null, sku, precio, stock },
+  empresaId
+) {
   if (!id) throw new Error('ID de producto no válido.');
 
   await actualizarProducto(
     id,
     {
       nombre: String(nombre).trim(),
+      categoria_id: categoriaId ? Number(categoriaId) : null,
       categoria: categoria ? String(categoria).trim() : 'General',
       codigo_barras: sku ? String(sku).trim() : null,
       precio_venta: Number(precio),
@@ -233,7 +243,7 @@ export async function modificarProducto(id, { nombre, categoria, sku, precio, st
     empresaId
   );
 
-  return { id, nombre, categoria, sku, precio, stock };
+  return { id, nombre, categoria, categoriaId, sku, precio, stock };
 }
 
 export async function eliminarProducto(id, empresaId) {

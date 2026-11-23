@@ -13,6 +13,7 @@ import { Boton } from '../components/atoms';
 import {
   Buscador,
   DialogoConfirmacion,
+  DialogoTicketQr,
   EscaneadorCodigo,
   SelectorCantidad,
 } from '../components/molecules';
@@ -25,11 +26,12 @@ import {
   registrarVenta,
 } from '../database';
 import { useSesion } from '../context';
+import { crearEnlaceTicket } from '../services';
 
 export default function VenderScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { empresaId, usuarioId } = useSesion();
+  const { empresa, empresaId, usuario, usuarioId } = useSesion();
   const productoDesdeParametro = route.params?.productoId;
 
   const [productos, setProductos] = useState([]);
@@ -40,6 +42,7 @@ export default function VenderScreen() {
   const [cargando, setCargando] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [escaneoVisible, setEscaneoVisible] = useState(false);
+  const [ticketQr, setTicketQr] = useState(null);
 
   const [dialogo, setDialogo] = useState({
     visible: false,
@@ -218,6 +221,37 @@ export default function VenderScreen() {
         metodoPago: metodoPago.toLowerCase() === 'qr' ? 'qr' : 'efectivo',
       });
 
+      const ahora = new Date();
+      const fecha = `${String(ahora.getDate()).padStart(2, '0')}/${String(
+        ahora.getMonth() + 1
+      ).padStart(2, '0')}/${ahora.getFullYear()} ${String(
+        ahora.getHours()
+      ).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+      const numeroTicket = String(ventaGuardada.numero_venta).padStart(3, '0');
+
+      const datosTicket = {
+        numero: numeroTicket,
+        fecha,
+        empresa: empresa?.nombre ?? 'NexCash',
+        vendedor: usuario?.nombre ?? 'Vendedor',
+        metodo: ventaGuardada.metodo_pago === 'qr' ? 'QR Simple' : 'Efectivo',
+        items: lineas.map((linea) => ({
+          nombre: String(linea.nombre ?? 'Producto'),
+          cantidad: Number(linea.cantidad ?? 0),
+          precio: Number(linea.precio ?? linea.precio_venta ?? 0),
+          subtotal: Number(linea.subtotal ?? 0),
+        })),
+        subtotal: Number(ventaGuardada.subtotal ?? 0),
+        descuento: Number(ventaGuardada.descuento ?? 0),
+        total: Number(ventaGuardada.total ?? 0),
+      };
+
+      setTicketQr({
+        ...datosTicket,
+        enlace: crearEnlaceTicket(datosTicket),
+        ventaId: ventaGuardada.id,
+        visible: false,
+      });
       setCarrito({});
       cargarProductos();
 
@@ -225,10 +259,19 @@ export default function VenderScreen() {
         visible: true,
         tipo: 'exito',
         titulo: '¡Venta completada!',
-        mensaje: `Ticket #${String(ventaGuardada.numero_venta).padStart(3, '0')}\nTotal cobrado: ${bs(ventaGuardada.total)}\n${unidades} unidad(es) procesada(s).`,
-        textoConfirmar: 'Aceptar',
-        textoCancelar: null,
-        onConfirmar: cerrarDialogo,
+        mensaje: `Ticket #${numeroTicket}\nTotal cobrado: ${bs(
+          ventaGuardada.total
+        )}\n¿Deseas generar el QR para que el cliente descargue su comprobante?`,
+        textoConfirmar: 'Generar QR',
+        textoCancelar: 'Ahora no',
+        onConfirmar: () => {
+          cerrarDialogo();
+          setTicketQr((actual) => (actual ? { ...actual, visible: true } : null));
+        },
+        onCancelar: () => {
+          cerrarDialogo();
+          setTicketQr(null);
+        },
       });
     } catch (e) {
       setDialogo({
@@ -396,6 +439,17 @@ export default function VenderScreen() {
           onConfirmar={dialogo.onConfirmar}
           onCancelar={dialogo.onCancelar}
           cargando={procesando}
+        />
+
+        <DialogoTicketQr
+          visible={ticketQr?.visible ?? false}
+          ticket={ticketQr}
+          onCerrar={() => setTicketQr(null)}
+          onVerDetalle={() => {
+            const ventaId = ticketQr?.ventaId;
+            setTicketQr(null);
+            if (ventaId) navigation.navigate('VentaDetalle', { ventaId });
+          }}
         />
       </View>
 

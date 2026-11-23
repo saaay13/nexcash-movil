@@ -63,7 +63,7 @@ const TEXTOS_INGLES = [
   },
   {
     patron: /no such column/i,
-    texto: 'Falta una columna en la base de datos. Reinicia la aplicación.',
+    texto: 'La base de datos necesita actualizarse. Cierra y abre la aplicación para continuar.',
   },
   {
     patron: /syntax error|near\s+["']/i,

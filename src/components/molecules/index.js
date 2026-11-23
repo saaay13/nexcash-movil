@@ -6,3 +6,5 @@ export { default as Buscador } from './Buscador';
 export { default as ChipFiltro } from './ChipFiltro';
 export { default as DialogoConfirmacion } from './DialogoConfirmacion';
 export { default as EscaneadorCodigo } from './EscaneadorCodigo';
+export { default as CodigoQr } from './CodigoQr';
+export { default as DialogoTicketQr } from './DialogoTicketQr';
