@@ -125,6 +125,32 @@ export async function obtenerMovimientosCaja(sesionCajaId) {
   );
 }
 
+export async function obtenerHistorialMovimientosCaja(empresaId, { limite = 100 } = {}) {
+  const empresa = Number(empresaId);
+  if (!Number.isInteger(empresa) || empresa <= 0) return [];
+
+  const db = await obtenerBD();
+  return db.getAllAsync(
+    `SELECT
+       m.id,
+       m.tipo,
+       m.concepto,
+       m.monto,
+       m.creado_en,
+       m.sesion_caja_id,
+       u.nombre AS usuario,
+       s.estado AS sesion_estado
+     FROM movimientos_caja m
+     JOIN usuarios u ON u.id = m.usuario_id
+     JOIN sesiones_caja s ON s.id = m.sesion_caja_id
+     WHERE m.empresa_id = ?
+     ORDER BY m.id DESC
+     LIMIT ?`,
+    empresa,
+    Number(limite) || 100
+  );
+}
+
 export async function cerrarSesionCaja({ sesionId, usuarioId, empresaId, montoReal }) {
   const { empresa, usuario } = idsValidos(empresaId, usuarioId);
   if (!empresa) throw new Error('No hay una empresa activa.');

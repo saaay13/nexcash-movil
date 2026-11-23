@@ -312,33 +312,35 @@ export async function obtenerResumenCaja(
   };
 }
 
-export async function obtenerVentasPorHora(empresaId) {
+export async function obtenerVentasPorDia(empresaId) {
   const empresa = Number(empresaId);
   const datos = [0, 0, 0, 0, 0, 0, 0];
   if (!Number.isInteger(empresa) || empresa <= 0) return datos;
 
   const db = await obtenerBD();
   const filas = await db.getAllAsync(
-    `SELECT CAST(strftime('%H', creado_en) AS INTEGER) AS hora,
-            COALESCE(SUM(total), 0) AS total
+    `SELECT date(creado_en) AS dia, COALESCE(SUM(total), 0) AS total
      FROM ventas
      WHERE empresa_id = ?
        AND estado = 'completada'
-       AND date(creado_en) = date('now', 'localtime')
-     GROUP BY hora`,
+       AND date(creado_en) >= date('now', 'localtime', '-6 days')
+       AND date(creado_en) <= date('now', 'localtime')
+     GROUP BY dia`,
     empresa
   );
 
+  const totales = new Map();
   for (const fila of filas) {
-    const hora = Number(fila.hora);
-    let indice = 0;
-    if (hora >= 20) indice = 6;
-    else if (hora >= 18) indice = 5;
-    else if (hora >= 16) indice = 4;
-    else if (hora >= 14) indice = 3;
-    else if (hora >= 12) indice = 2;
-    else if (hora >= 10) indice = 1;
-    datos[indice] = redondear(datos[indice] + Number(fila.total || 0));
+    totales.set(String(fila.dia), Number(fila.total || 0));
+  }
+
+  const hoy = new Date();
+  for (let indice = 0; indice < datos.length; indice++) {
+    const dia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - (6 - indice));
+    const clave = `${dia.getFullYear()}-${String(dia.getMonth() + 1).padStart(2, '0')}-${String(
+      dia.getDate()
+    ).padStart(2, '0')}`;
+    datos[indice] = redondear(totales.get(clave) ?? 0);
   }
 
   return datos;

@@ -97,6 +97,28 @@ export default function PerfilScreen() {
     }
   }
 
+  async function quitarFoto() {
+    if (!usuario?.id || guardando) return;
+
+    setGuardando(true);
+    try {
+      const datos = await actualizarPerfil({
+        id: usuario.id,
+        nombre,
+        correo,
+        telefono,
+        fotoPerfil: null,
+      });
+      actualizarUsuario(datos);
+      setFotoPerfil(null);
+      aviso('exito', 'Foto eliminada', 'La foto de tu perfil se quitó correctamente.');
+    } catch (e) {
+      aviso('advertencia', 'No se pudo quitar la foto', mensajeError(e, 'Intenta nuevamente.'));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   function pedirCerrarSesion() {
     setDialogo({
       visible: true,
@@ -272,6 +294,14 @@ export default function PerfilScreen() {
           detalle="Elige una foto de tu galería o toma una nueva"
           onPress={cambiarFoto}
         />
+        {fotoPerfil ? (
+          <Opcion
+            icono="trash-outline"
+            titulo="Quitar foto de perfil"
+            detalle="Volver a mostrar tus iniciales"
+            onPress={quitarFoto}
+          />
+        ) : null}
         <Opcion
           icono="business-outline"
           titulo="Cambiar de empresa"

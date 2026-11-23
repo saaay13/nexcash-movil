@@ -9,7 +9,6 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { BotonIcono } from '../components/atoms';
 import { AccionRapida, FilaVenta, StatCard } from '../components/molecules';
 import { DrawerLateral, GraficoVentas, TarjetaRecaudacion } from '../components/organisms';
 import { Pantalla } from '../components/templates';
@@ -18,7 +17,7 @@ import {
   obtenerProductos,
   obtenerResumenCaja,
   obtenerVentas,
-  obtenerVentasPorHora,
+  obtenerVentasPorDia,
 } from '../database';
 import { useSesion } from '../context';
 
@@ -29,7 +28,6 @@ export default function InicioScreen() {
   const navigation = useNavigation();
   const { usuario, empresa, empresaId } = useSesion();
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [notifications, setNotifications] = useState(true);
   const [listaProductos, setListaProductos] = useState([]);
   const [ventasRecientes, setVentasRecientes] = useState([]);
   const [resumen, setResumen] = useState({
@@ -38,7 +36,7 @@ export default function InicioScreen() {
     totalEfectivo: 0,
     totalQr: 0,
   });
-  const [ventasPorHora, setVentasPorHora] = useState([0, 0, 0, 0, 0, 0, 0]);
+  const [ventasPorDia, setVentasPorDia] = useState([0, 0, 0, 0, 0, 0, 0]);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,16 +47,16 @@ export default function InicioScreen() {
         obtenerProductos({ empresaId }),
         obtenerVentas({ empresaId, limite: 4 }),
         obtenerResumenCaja(empresaId, { soloHoy: true }),
-        obtenerVentasPorHora(empresaId),
+        obtenerVentasPorDia(empresaId),
       ])
-        .then(([prods, ventasDB, resumenDB, horasDB]) => {
+        .then(([prods, ventasDB, resumenDB, diasDB]) => {
           if (cancelado) return;
           setListaProductos(Array.isArray(prods) ? prods : []);
           setVentasRecientes(Array.isArray(ventasDB) ? ventasDB : []);
           setResumen(
             resumenDB ?? { totalVentas: 0, totalRecaudado: 0, totalEfectivo: 0, totalQr: 0 }
           );
-          setVentasPorHora(Array.isArray(horasDB) ? horasDB : [0, 0, 0, 0, 0, 0, 0]);
+          setVentasPorDia(Array.isArray(diasDB) ? diasDB : [0, 0, 0, 0, 0, 0, 0]);
         })
         .catch(() => {
           if (cancelado) return;
@@ -116,14 +114,6 @@ export default function InicioScreen() {
           </View>
         </View>
 
-        <BotonIcono
-          name="notifications-outline"
-          size={23}
-          style={styles.notificationButton}
-          onPress={() => setNotifications((v) => !v)}
-        />
-
-        {notifications && <View style={styles.notificationDot} />}
       </View>
 
       <TarjetaRecaudacion
@@ -223,7 +213,7 @@ export default function InicioScreen() {
         </TouchableOpacity>
       ) : null}
 
-      <GraficoVentas datos={ventasPorHora} />
+      <GraficoVentas datos={ventasPorDia} />
 
       <View style={styles.sectionHeading}>
         <Text style={styles.sectionTitle}>Ventas Recientes</Text>
@@ -308,20 +298,6 @@ const styles = StyleSheet.create({
   terminalText: {
     color: '#464E5E',
     fontSize: 11,
-  },
-  notificationButton: {
-    position: 'relative',
-  },
-  notificationDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: '#FF3B30',
-    position: 'absolute',
-    top: 1,
-    right: 1,
-    borderWidth: 2,
-    borderColor: '#F6F8FF',
   },
   statsRow: {
     flexDirection: 'row',

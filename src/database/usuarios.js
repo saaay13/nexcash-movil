@@ -100,7 +100,7 @@ export async function actualizarPerfil({ id, nombre, correo, telefono, fotoPerfi
   try {
     await db.runAsync(
       `UPDATE usuarios
-       SET nombre = ?, correo = ?, telefono = ?, foto_perfil = COALESCE(?, foto_perfil)
+       SET nombre = ?, correo = ?, telefono = ?, foto_perfil = ?
        WHERE id = ?`,
       nombreLimpio,
       correoLimpio,

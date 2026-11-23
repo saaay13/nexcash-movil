@@ -177,6 +177,15 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
               onPress={() => navegarA('Caja')}
             />
 
+            <ItemMenu
+              icono="receipt-outline"
+              colorIcono="#0369A1"
+              fondoIcono="#E0F2FE"
+              titulo="Historial de Caja"
+              subtitulo="Ingresos, egresos y responsables"
+              onPress={() => navegarA('HistorialCaja')}
+            />
+
             <View style={styles.divisor} />
 
             <Text style={styles.seccionTitulo}>ESPACIO Y CUENTA</Text>
@@ -212,7 +221,7 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
 
           <View style={styles.pieDrawer}>
             <Ionicons name="shield-checkmark-outline" size={14} color={colores.textoSuave} />
-            <Text style={styles.pieTexto}>NexCash SaaS · Móvil v1.0</Text>
+            <Text style={styles.pieTexto}>NexCash SaaS · KJ</Text>
           </View>
         </Animated.View>
       </View>

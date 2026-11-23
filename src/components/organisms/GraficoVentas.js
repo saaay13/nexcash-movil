@@ -3,31 +3,41 @@ import { bs, colores, radios, sombras } from '../../theme';
 
 const BLUE = colores.primarioContenedor;
 const PURPLE = colores.terciario;
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+function obtenerEtiquetas() {
+  const hoy = new Date();
+  return Array.from({ length: 7 }, (_, indice) => {
+    const dia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - (6 - indice));
+    return `${DIAS[dia.getDay()]} ${dia.getDate()}`;
+  });
+}
 
 export default function GraficoVentas({ datos = [0, 0, 0, 0, 0, 0, 0] }) {
-  const horas = ['08h', '10h', '12h', '14h', '16h', '18h', '20h'];
+  const etiquetas = obtenerEtiquetas();
   const total = datos.reduce((acc, valor) => acc + Number(valor || 0), 0);
+  const maximo = Math.max(0, ...datos.map((valor) => Number(valor || 0)));
 
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeading}>
         <View>
-          <Text style={styles.sectionTitle}>Ventas por Hora</Text>
+          <Text style={styles.sectionTitle}>Ventas por Día</Text>
           <Text style={styles.chartSubtitle}>
-            {total > 0 ? `Total de hoy: ${bs(total)}` : 'Sin ventas registradas hoy'}
+            {total > 0 ? `Últimos 7 días: ${bs(total)}` : 'Sin ventas en los últimos 7 días'}
           </Text>
         </View>
 
         <View style={styles.todayBadge}>
           <View style={styles.todayDot} />
-          <Text style={styles.todayText}>Hoy</Text>
+          <Text style={styles.todayText}>7 días</Text>
         </View>
       </View>
 
       {total === 0 ? (
         <View style={styles.emptyChart}>
           <Text style={styles.emptyChartText}>
-            Registra tu primera venta para ver la actividad por hora.
+            Registra ventas para ver la actividad de los últimos 7 días.
           </Text>
         </View>
       ) : (
@@ -47,7 +57,7 @@ export default function GraficoVentas({ datos = [0, 0, 0, 0, 0, 0, 0] }) {
                       style={[
                         styles.bar,
                         {
-                          height: Math.min(100, Math.max(20, monto * 2.8)),
+                          height: Math.max(10, (Number(monto || 0) / maximo) * 100),
                           backgroundColor: i % 2 === 0 ? PURPLE : BLUE,
                         },
                       ]}
@@ -61,9 +71,9 @@ export default function GraficoVentas({ datos = [0, 0, 0, 0, 0, 0, 0] }) {
       )}
 
       <View style={styles.chartLabels}>
-        {horas.map((hora, i) => (
+        {etiquetas.map((etiqueta, i) => (
           <Text
-            key={hora}
+            key={etiqueta}
             style={[
               styles.chartLabel,
               datos[i] > 0 && {
@@ -72,7 +82,7 @@ export default function GraficoVentas({ datos = [0, 0, 0, 0, 0, 0, 0] }) {
               },
             ]}
           >
-            {hora}
+            {etiqueta}
           </Text>
         ))}
       </View>

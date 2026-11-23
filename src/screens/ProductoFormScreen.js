@@ -134,6 +134,22 @@ export default function ProductoFormScreen() {
     }
   }
 
+  function pedirQuitarFoto() {
+    setDialogo({
+      visible: true,
+      tipo: 'advertencia',
+      titulo: '¿Quitar la foto?',
+      mensaje: 'La foto se quitará cuando guardes los cambios del producto.',
+      textoConfirmar: 'Quitar foto',
+      textoCancelar: 'Cancelar',
+      onConfirmar: () => {
+        cerrarDialogo();
+        setImagen(null);
+      },
+      onCancelar: cerrarDialogo,
+    });
+  }
+
   async function guardar() {
     const precioNum = Number(String(precio).replace(',', '.'));
     const stockNum = Number(stock);
@@ -372,6 +388,16 @@ export default function ProductoFormScreen() {
               ? 'Toca la foto para elegir otra.'
               : 'Agrega una foto para identificarlo más rápido.'}
         </Text>
+        {imagen ? (
+          <Boton
+            titulo="Quitar foto"
+            icono="trash-outline"
+            variante="peligro"
+            tamano="sm"
+            onPress={pedirQuitarFoto}
+            style={styles.botonQuitarFoto}
+          />
+        ) : null}
       </View>
 
       <Campo
@@ -690,6 +716,10 @@ const styles = StyleSheet.create({
     color: colores.textoSuave,
     marginTop: 6,
     marginLeft: 2,
+  },
+  botonQuitarFoto: {
+    alignSelf: 'flex-start',
+    marginTop: espacios.sm,
   },
   categoriaBloque: {
     marginBottom: espacios.md,

@@ -21,6 +21,7 @@ import {
   CajaScreen,
   CategoriasScreen,
   MovimientosInventarioScreen,
+  HistorialCajaScreen,
 } from './src/screens';
 
 import { BarraPestanas } from './src/components/organisms';
@@ -76,6 +77,7 @@ export default function App() {
               <Stack.Screen name="Perfil" component={PerfilScreen} />
               <Stack.Screen name="Categorias" component={CategoriasScreen} />
               <Stack.Screen name="MovimientosInventario" component={MovimientosInventarioScreen} />
+              <Stack.Screen name="HistorialCaja" component={HistorialCajaScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SesionProvider>

@@ -175,7 +175,7 @@ export default function LoginScreen() {
             <View style={styles.pieFila}>
               <Ionicons name="shield-checkmark-outline" size={15} color={colores.textoSuave} />
               <Text style={styles.pieTexto}>
-                NexCash Móvil
+                NexCash Móvil · KJ
               </Text>
             </View>
           </View>
