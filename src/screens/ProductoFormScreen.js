@@ -22,17 +22,21 @@ import {
   obtenerCategorias,
 } from '../database';
 import { useSesion } from '../context';
+import { consultarProductoPorCodigo } from '../services';
 
 export default function ProductoFormScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { empresaId } = useSesion();
   const producto = route.params?.producto;
+  const datosApi = route.params?.datosApi ?? null;
   const codigoInicial = route.params?.codigoBarras ?? '';
-  const categoriaInicial = route.params?.categoria ?? '';
+  const categoriaInicial = datosApi?.categoria ?? route.params?.categoria ?? '';
 
-  const [nombre, setNombre] = useState(producto?.nombre ?? '');
-  const [descripcion, setDescripcion] = useState(producto?.descripcion ?? '');
+  const [nombre, setNombre] = useState(producto?.nombre ?? datosApi?.nombre ?? '');
+  const [descripcion, setDescripcion] = useState(
+    producto?.descripcion ?? datosApi?.descripcion ?? ''
+  );
   const [categoria, setCategoria] = useState(producto?.categoria ?? categoriaInicial);
   const [categoriaId, setCategoriaId] = useState(producto?.categoria_id ?? null);
   const [categorias, setCategorias] = useState([]);
@@ -52,6 +56,7 @@ export default function ProductoFormScreen() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [escaneoVisible, setEscaneoVisible] = useState(false);
+  const [usarApi, setUsarApi] = useState(false);
 
   const [dialogo, setDialogo] = useState({
     visible: false,
@@ -234,6 +239,54 @@ export default function ProductoFormScreen() {
     }
   }
 
+  async function procesarLectura(codigo, conApi) {
+    setSku(codigo);
+    setEscaneoVisible(false);
+
+    if (!conApi) return;
+
+    try {
+      const datos = await consultarProductoPorCodigo(codigo);
+      if (!datos) {
+        setDialogo({
+          visible: true,
+          tipo: 'info',
+          titulo: 'Sin datos en la API',
+          mensaje:
+            'Open Food Facts no tiene información para este código. Completa los campos manualmente.',
+          textoConfirmar: 'Entendido',
+          textoCancelar: null,
+          onConfirmar: cerrarDialogo,
+        });
+        return;
+      }
+
+      setNombre((actual) => actual || datos.nombre);
+      setDescripcion((actual) => actual || datos.descripcion);
+      setCategoria((actual) => actual || datos.categoria);
+      setDialogo({
+        visible: true,
+        tipo: 'exito',
+        titulo: 'Datos obtenidos de la API',
+        mensaje:
+          'Se completaron nombre, descripción y categoría sugerida. Verifica la información y agrega precio, existencia y tu categoría.',
+        textoConfirmar: 'Entendido',
+        textoCancelar: null,
+        onConfirmar: cerrarDialogo,
+      });
+    } catch (e) {
+      setDialogo({
+        visible: true,
+        tipo: 'advertencia',
+        titulo: 'No se pudo consultar la API',
+        mensaje: mensajeError(e, 'Completa los campos manualmente.'),
+        textoConfirmar: 'Entendido',
+        textoCancelar: null,
+        onConfirmar: cerrarDialogo,
+      });
+    }
+  }
+
   return (
     <Pantalla titulo={producto ? 'Editar producto' : 'Nuevo producto'}>
       <View style={styles.resumen}>
@@ -249,9 +302,11 @@ export default function ProductoFormScreen() {
             {producto ? producto.nombre : 'Producto del catálogo'}
           </Text>
           <Text style={styles.resumenTexto}>
-            {producto
-              ? 'Edita los datos y guarda los cambios.'
-              : 'Registra nombre, precio y existencia para venderlo.'}
+            {datosApi && !producto
+              ? 'Datos sugeridos por Open Food Facts. Revisa la categoría y agrega precio y existencia.'
+              : producto
+                ? 'Edita los datos y guarda los cambios.'
+                : 'Registra nombre, precio y existencia para venderlo.'}
           </Text>
         </View>
       </View>
@@ -392,11 +447,10 @@ export default function ProductoFormScreen() {
 
       <EscaneadorCodigo
         visible={escaneoVisible}
+        usarApi={usarApi}
+        onCambiarUsarApi={setUsarApi}
         onCerrar={() => setEscaneoVisible(false)}
-        onLeer={(codigo) => {
-          setSku(codigo);
-          setEscaneoVisible(false);
-        }}
+        onLeer={procesarLectura}
       />
 
       <Modal

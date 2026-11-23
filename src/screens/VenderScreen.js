@@ -26,7 +26,11 @@ import {
   registrarVenta,
 } from '../database';
 import { useSesion } from '../context';
-import { crearEnlaceTicket, descargarReciboPdf } from '../services';
+import {
+  consultarProductoPorCodigo,
+  crearEnlaceTicket,
+  descargarReciboPdf,
+} from '../services';
 
 export default function VenderScreen() {
   const navigation = useNavigation();
@@ -43,6 +47,7 @@ export default function VenderScreen() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [escaneoVisible, setEscaneoVisible] = useState(false);
   const [escaneoContinuo, setEscaneoContinuo] = useState(false);
+  const [usarApi, setUsarApi] = useState(false);
   const [conteoEscaneos, setConteoEscaneos] = useState(0);
   const [escaneados, setEscaneados] = useState([]);
   const [ultimoEscaneo, setUltimoEscaneo] = useState(null);
@@ -93,9 +98,12 @@ export default function VenderScreen() {
     setEscaneoVisible(false);
   }
 
-  function registrarCodigo(codigo) {
+  function registrarCodigo(codigo, datosApi) {
     cerrarEscaneo();
-    navigation.navigate('ProductoForm', { codigoBarras: codigo });
+    navigation.navigate('ProductoForm', {
+      codigoBarras: codigo,
+      datosApi: datosApi ?? null,
+    });
   }
 
   function marcarEscaneado(id) {
@@ -176,12 +184,39 @@ export default function VenderScreen() {
     });
   }
 
-  async function procesarCodigo(codigo) {
+  async function procesarCodigo(codigo, conApi = false) {
     try {
       const producto = await obtenerProductoPorCodigo(codigo, empresaId);
 
       if (!producto) {
-        setUltimoEscaneo({ tipo: 'error', codigo });
+        if (!conApi) {
+          setUltimoEscaneo({ tipo: 'error', codigo });
+          return;
+        }
+
+        try {
+          const datosApi = await consultarProductoPorCodigo(codigo);
+          if (datosApi) {
+            setUltimoEscaneo({
+              tipo: 'error',
+              codigo,
+              datosApi,
+              detalle: 'Datos de Open Food Facts listos. Toca Registrar.',
+            });
+            return;
+          }
+          setUltimoEscaneo({
+            tipo: 'error',
+            codigo,
+            detalle: 'No hay datos en la API. Completa los campos manualmente.',
+          });
+        } catch (e) {
+          setUltimoEscaneo({
+            tipo: 'error',
+            codigo,
+            detalle: mensajeError(e, 'No se pudo consultar la API.'),
+          });
+        }
         return;
       }
 
@@ -219,12 +254,12 @@ export default function VenderScreen() {
   async function procesarSiguienteCodigo() {
     if (leyendoCodigo.current) return;
 
-    const codigo = colaLecturas.current.shift();
-    if (!codigo) return;
+    const lectura = colaLecturas.current.shift();
+    if (!lectura) return;
 
     leyendoCodigo.current = true;
     try {
-      await procesarCodigo(codigo);
+      await procesarCodigo(lectura.codigo, lectura.conApi);
     } finally {
       leyendoCodigo.current = false;
       if (colaLecturas.current.length > 0) {
@@ -233,8 +268,8 @@ export default function VenderScreen() {
     }
   }
 
-  function encolarCodigo(codigo) {
-    colaLecturas.current.push(codigo);
+  function encolarCodigo(codigo, conApi = false) {
+    colaLecturas.current.push({ codigo, conApi: Boolean(conApi) });
     procesarSiguienteCodigo();
   }
 
@@ -518,9 +553,11 @@ export default function VenderScreen() {
           continuo={escaneoContinuo}
           conteo={conteoEscaneos}
           ultimoEscaneo={ultimoEscaneo}
+          usarApi={usarApi}
+          onCambiarUsarApi={setUsarApi}
           onCerrar={cerrarEscaneo}
           onTerminar={cerrarEscaneo}
-          onRegistrar={registrarCodigo}
+          onRegistrar={(codigo) => registrarCodigo(codigo, ultimoEscaneo?.datosApi)}
           onLeer={encolarCodigo}
         />
 

@@ -16,6 +16,7 @@ Este repositorio se publica únicamente para revisión, presentación y evaluaci
 - Registro de ventas con control de existencias y caja abierta obligatoria.
 - Historial de ventas, detalle de comprobantes y compartir ticket.
 - Lectura de códigos de barras con la cámara para asignar SKU y agregar productos al carrito.
+- Consulta opcional a Open Food Facts al escanear un código no registrado, para sugerir nombre, descripción y categoría (desactivada por defecto).
 - Generación de un código QR por venta para consultar el comprobante y descargarlo en PDF.
 - Interfaz completamente en español y compatible con Android, iOS y web.
 
@@ -51,6 +52,13 @@ También está disponible el script `npm run web`.
 4. Si el código no existe, el aviso muestra **Registrar**: se abre **Nuevo producto** con el código ya cargado y el carrito se conserva.
 5. Cuando termines, toca **Terminar escaneo** y después **Confirmar cobro**.
 6. En **Nuevo producto** también puedes tocar **Escanear código de barras** para llenar el SKU sin escribirlo. Esa lectura es única: la cámara se cierra al leer.
+7. Dentro de la cámara aparece **Buscar datos en la API (opcional)**. Viene **desactivada**: en ese modo solo se lee el código y tú completas el resto de los campos, que es el comportamiento habitual. Si la activas, los códigos que no estén en tu inventario se consultan en Open Food Facts y se sugieren nombre, descripción y categoría al abrir **Nuevo producto**. El precio, la existencia y la categoría definitiva siempre los pones tú.
+
+La consulta usa `product_type=all`, por lo que encuentra productos de **alimentos, belleza/higiene, productos generales y mascotas**. Por ejemplo, el desodorante **Old Spice Leña de 50 g** (`7506339390230`) se encuentra en Open Beauty Facts.
+
+Cuando una ficha no tiene nombre en español, se usa un nombre alternativo de la API o, como último recurso, la marca junto con la presentación. Siempre puedes corregirlo antes de guardar.
+
+Open Food Facts permite **15 consultas de producto por minuto por IP**. NexCash controla ese límite, envía un identificador de aplicación y muestra un aviso si se alcanza; en ese caso puedes seguir registrando manualmente. Los datos son colaborativos y pueden estar incompletos, así que revísalos antes de guardar.
 
 Al terminar el escaneo se limpia el buscador y los productos escaneados aparecen **primero en la lista**, con una insignia **Escaneado**, para que no tengas que buscarlos uno por uno.
 
