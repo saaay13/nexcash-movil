@@ -43,11 +43,12 @@ export async function crearProducto(p) {
   const db = await obtenerBD();
   const resultado = await db.runAsync(
     `INSERT INTO productos
-      (empresa_id, nombre, categoria_id, categoria, codigo_barras, precio_compra, precio_venta,
-       stock_actual, stock_minimo, imagen, api_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (empresa_id, nombre, descripcion, categoria_id, categoria, codigo_barras,
+       precio_compra, precio_venta, stock_actual, stock_minimo, imagen, api_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     empresaId,
     String(p.nombre).trim(),
+    p.descripcion ? String(p.descripcion).trim() : null,
     p.categoriaId ?? p.categoria_id ?? null,
     p.categoria ? String(p.categoria).trim() : null,
     p.codigo_barras ? String(p.codigo_barras).trim() : null,
@@ -63,6 +64,7 @@ export async function crearProducto(p) {
     id: resultado.lastInsertRowId,
     empresa_id: empresaId,
     nombre: String(p.nombre).trim(),
+    descripcion: p.descripcion ? String(p.descripcion).trim() : null,
     categoria_id: p.categoriaId ?? p.categoria_id ?? null,
     categoria: p.categoria ?? null,
     sku: p.codigo_barras ?? null,
@@ -75,6 +77,7 @@ export async function crearProducto(p) {
 export async function agregarProducto({
   empresaId,
   nombre,
+  descripcion = '',
   categoria = 'General',
   categoriaId = null,
   sku = '',
@@ -86,6 +89,7 @@ export async function agregarProducto({
   return crearProducto({
     empresaId,
     nombre,
+    descripcion,
     categoria,
     categoriaId,
     codigo_barras: sku,
@@ -185,6 +189,7 @@ export async function actualizarProducto(id, cambios, empresaId) {
   validarProducto(cambios, { parcial: true });
   const camposPermitidos = [
     'nombre',
+    'descripcion',
     'categoria_id',
     'categoria',
     'codigo_barras',
@@ -225,7 +230,16 @@ export async function actualizarProducto(id, cambios, empresaId) {
 
 export async function modificarProducto(
   id,
-  { nombre, categoria, categoriaId = null, sku, precio, stock },
+  {
+    nombre,
+    descripcion = '',
+    categoria,
+    categoriaId = null,
+    sku,
+    precio,
+    stock,
+    stockMinimo = 5,
+  },
   empresaId
 ) {
   if (!id) throw new Error('ID de producto no válido.');
@@ -234,16 +248,28 @@ export async function modificarProducto(
     id,
     {
       nombre: String(nombre).trim(),
+      descripcion: descripcion ? String(descripcion).trim() : null,
       categoria_id: categoriaId ? Number(categoriaId) : null,
       categoria: categoria ? String(categoria).trim() : 'General',
       codigo_barras: sku ? String(sku).trim() : null,
       precio_venta: Number(precio),
       stock_actual: Number(stock),
+      stock_minimo: Number(stockMinimo),
     },
     empresaId
   );
 
-  return { id, nombre, categoria, categoriaId, sku, precio, stock };
+  return {
+    id,
+    nombre,
+    descripcion,
+    categoria,
+    categoriaId,
+    sku,
+    precio,
+    stock,
+    stockMinimo,
+  };
 }
 
 export async function eliminarProducto(id, empresaId) {

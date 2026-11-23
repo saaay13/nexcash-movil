@@ -32,6 +32,7 @@ export default function ProductoFormScreen() {
   const categoriaInicial = route.params?.categoria ?? '';
 
   const [nombre, setNombre] = useState(producto?.nombre ?? '');
+  const [descripcion, setDescripcion] = useState(producto?.descripcion ?? '');
   const [categoria, setCategoria] = useState(producto?.categoria ?? categoriaInicial);
   const [categoriaId, setCategoriaId] = useState(producto?.categoria_id ?? null);
   const [categorias, setCategorias] = useState([]);
@@ -44,6 +45,9 @@ export default function ProductoFormScreen() {
   );
   const [stock, setStock] = useState(
     producto ? String(producto.stock ?? producto.stock_actual ?? '') : ''
+  );
+  const [stockMinimo, setStockMinimo] = useState(
+    producto ? String(producto.stock_minimo ?? 5) : '5'
   );
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -100,6 +104,7 @@ export default function ProductoFormScreen() {
   async function guardar() {
     const precioNum = Number(String(precio).replace(',', '.'));
     const stockNum = Number(stock);
+    const minimoNum = stockMinimo.trim() === '' ? 5 : Number(stockMinimo);
 
     if (!nombre.trim() || !precio.trim() || !stock.trim()) {
       setError('El nombre, el precio y la existencia son obligatorios.');
@@ -117,6 +122,10 @@ export default function ProductoFormScreen() {
       setError('La existencia debe ser un número entero mayor o igual a cero.');
       return;
     }
+    if (!Number.isInteger(minimoNum) || minimoNum < 0) {
+      setError('El mínimo de alerta debe ser un número entero mayor o igual a cero.');
+      return;
+    }
     if (!empresaId) {
       setError('No hay una empresa activa. Vuelve a seleccionar tu negocio.');
       return;
@@ -128,11 +137,13 @@ export default function ProductoFormScreen() {
     try {
       const datosProducto = {
         nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
         categoria: categoriaActiva.nombre,
         categoriaId: Number(categoriaActiva.id),
         sku: sku.trim() || null,
         precio: precioNum,
         stock: stockNum,
+        stockMinimo: minimoNum,
       };
 
       if (producto?.id) {
@@ -253,6 +264,17 @@ export default function ProductoFormScreen() {
         icono="pricetag-outline"
       />
 
+      <Campo
+        etiqueta="Descripción"
+        valor={descripcion}
+        onChangeText={setDescripcion}
+        placeholder="Ej. Presentación de 1 kg, grano largo, empaque sellado"
+        icono="document-text-outline"
+        multiline
+        numberOfLines={3}
+        textAlignVertical="top"
+      />
+
       <View style={styles.categoriaBloque}>
         <Text style={styles.categoriaEtiqueta}>Categoría *</Text>
         <Pressable
@@ -322,6 +344,18 @@ export default function ProductoFormScreen() {
         icono="layers-outline"
         keyboardType="number-pad"
       />
+
+      <Campo
+        etiqueta="Mínimo para alerta (unidades)"
+        valor={stockMinimo}
+        onChangeText={setStockMinimo}
+        placeholder="5"
+        icono="alert-circle-outline"
+        keyboardType="number-pad"
+      />
+      <Text style={styles.ayudaMinimo}>
+        Cuando la existencia llegue a este número, el producto se marca como crítico.
+      </Text>
 
       {error ? (
         <View style={styles.errorCaja}>
@@ -616,6 +650,13 @@ const styles = StyleSheet.create({
   botonNuevaCategoria: {
     marginTop: espacios.md,
     marginBottom: espacios.sm,
+  },
+  ayudaMinimo: {
+    fontSize: 11,
+    color: colores.textoSuave,
+    marginTop: -espacios.sm,
+    marginBottom: espacios.md,
+    marginLeft: 4,
   },
   botonEscanear: {
     alignSelf: 'flex-start',

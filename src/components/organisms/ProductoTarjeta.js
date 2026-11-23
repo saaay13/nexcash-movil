@@ -55,6 +55,12 @@ export default function ProductoTarjeta({
             ) : null}
           </View>
 
+          {producto.descripcion ? (
+            <Text style={styles.descripcion} numberOfLines={1}>
+              {producto.descripcion}
+            </Text>
+          ) : null}
+
           <View style={styles.precioStockFila}>
             <Text style={styles.precio}>{bs(producto.precio ?? producto.precio_venta)}</Text>
             <Etiqueta
@@ -136,6 +142,11 @@ const styles = StyleSheet.create({
   categoria: {
     ...tipografia.micro,
     color: colores.secundario,
+  },
+  descripcion: {
+    ...tipografia.micro,
+    color: colores.textoSuave,
+    marginTop: 3,
   },
   precioStockFila: {
     flexDirection: 'row',

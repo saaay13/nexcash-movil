@@ -57,9 +57,9 @@ Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Los 
 1. En **Categorías**, toca **Nueva** y registra las categorías que uses en tu negocio.
 2. En **Productos**, toca **Nuevo**.
 3. Toca **Selecciona una categoría** y elige una de la lista. Si todavía no tienes ninguna, usa **Crear nueva categoría**.
-4. Completa nombre, precio y existencia, y toca **Registrar producto**.
+4. Completa nombre, descripción (opcional), precio, existencia y mínimo para alerta, y toca **Registrar producto**.
 
-El producto queda asociado a la categoría elegida: aparece en ese filtro y se suma al conteo de la categoría.
+El producto queda asociado a la categoría elegida: aparece en ese filtro y se suma al conteo de la categoría. El mínimo para alerta es configurable por producto (por defecto 5): cuando la existencia sea menor o igual a ese número, el producto se marca como crítico.
 
 ## Cómo generar el QR y descargar el PDF del ticket
 
