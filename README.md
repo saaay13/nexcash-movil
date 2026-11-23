@@ -47,8 +47,16 @@ También está disponible el script `npm run web`.
 
 1. En la pantalla **Vender**, toca **Escanear código de barras**. También puedes tocar el ícono de código de barras a la derecha del buscador cuando el campo esté vacío.
 2. Acepta el permiso de cámara y apunta al código hasta que se lea automáticamente.
-3. Si el producto existe, se agrega al carrito. Si no existe, toca **Registrar** y se abrirá **Nuevo producto** con el código ya cargado en **Código o SKU**.
-4. En **Nuevo producto** también puedes tocar **Escanear código de barras** para llenar el SKU sin escribirlo.
+3. La cámara **permanece abierta**: sigue apuntando al siguiente producto sin volver a tocar el botón. Aparece un aviso tipo **"Crema dental +1"** y un contador de productos escaneados.
+4. Si el código no existe, el aviso muestra **Registrar**: se abre **Nuevo producto** con el código ya cargado y el carrito se conserva.
+5. Cuando termines, toca **Terminar escaneo** y después **Confirmar cobro**.
+6. En **Nuevo producto** también puedes tocar **Escanear código de barras** para llenar el SKU sin escribirlo. Esa lectura es única: la cámara se cierra al leer.
+
+Al terminar el escaneo se limpia el buscador y los productos escaneados aparecen **primero en la lista**, con una insignia **Escaneado**, para que no tengas que buscarlos uno por uno.
+
+El escaneo agrega **una sola unidad por producto**. Si vuelves a escanear un producto que ya está en el carrito, aparece el aviso **“Ya está en el carrito”** y no se suma otra unidad. Para llevar dos o más del mismo producto, usa el botón **+** del contador en la lista manual. El modo manual (buscador y botones + / −) sigue disponible como respaldo.
+
+Además, se ignora el mismo código durante 1,5 segundos mientras lo mantienes enfrente, para evitar lecturas repetidas del mismo instante.
 
 Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Los productos importados de DummyJSON no traen código de barras: asígnale un SKU al crearlos para poder escanearlos después. En web, abre la app desde `localhost` o HTTPS y permite el acceso a la cámara del navegador.
 
@@ -61,13 +69,13 @@ Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Los 
 
 El producto queda asociado a la categoría elegida: aparece en ese filtro y se suma al conteo de la categoría. El mínimo para alerta es configurable por producto (por defecto 5): cuando la existencia sea menor o igual a ese número, el producto se marca como crítico.
 
-## Cómo generar el QR y descargar el PDF del ticket
+## Cómo entregar el comprobante al cliente
 
 1. Con la caja abierta, registra la venta y toca **Confirmar cobro**.
 2. En el aviso de **¡Venta completada!**, toca **Generar QR**.
-3. Muestra el código QR al cliente. Al escanearlo se abre el comprobante de su compra.
-4. En esa página, toca **Descargar PDF**. El archivo se guarda como `Ticket-001.pdf`.
-5. Si necesitas consultar la venta dentro de la app, toca **Ver detalle** en el modal del QR.
+3. Muestra el QR al cliente. Al escanearlo se abre la página del comprobante y **el PDF se descarga automáticamente**. Si el navegador bloquea la descarga automática, aparece el botón **Descargar PDF** para que lo toque.
+4. El PDF incluye el código QR y todos los datos en **texto plano** (producto, cantidad, precio, subtotal y total), para que no haga falta escanearlo con otra aplicación.
+5. En la app, **Descargar copia local** guarda un ejemplar para el vendedor (en el celular se abre compartir/guardar; en web, el diálogo de impresión). **Ver detalle** consulta la venta dentro de NexCash.
 
 El QR lleva los datos del ticket comprimidos dentro de la propia URL; no se envía información a ningún servidor. La página del comprobante se sirve desde la carpeta `ticket/` de este repositorio mediante GitHub Pages:
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -26,7 +26,7 @@ import {
   registrarVenta,
 } from '../database';
 import { useSesion } from '../context';
-import { crearEnlaceTicket } from '../services';
+import { crearEnlaceTicket, descargarReciboPdf } from '../services';
 
 export default function VenderScreen() {
   const navigation = useNavigation();
@@ -42,7 +42,16 @@ export default function VenderScreen() {
   const [cargando, setCargando] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [escaneoVisible, setEscaneoVisible] = useState(false);
+  const [escaneoContinuo, setEscaneoContinuo] = useState(false);
+  const [conteoEscaneos, setConteoEscaneos] = useState(0);
+  const [escaneados, setEscaneados] = useState([]);
+  const [ultimoEscaneo, setUltimoEscaneo] = useState(null);
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
   const [ticketQr, setTicketQr] = useState(null);
+
+  const carritoRef = useRef({});
+  const colaLecturas = useRef([]);
+  const leyendoCodigo = useRef(false);
 
   const [dialogo, setDialogo] = useState({
     visible: false,
@@ -59,6 +68,40 @@ export default function VenderScreen() {
     setDialogo((d) => ({ ...d, visible: false }));
   }
 
+  const fijarCarrito = useCallback((actualizacion) => {
+    const siguiente =
+      typeof actualizacion === 'function'
+        ? actualizacion(carritoRef.current)
+        : actualizacion;
+    carritoRef.current = siguiente;
+    setCarrito(siguiente);
+    return siguiente;
+  }, []);
+
+  function abrirEscaneo() {
+    setBusqueda('');
+    setConteoEscaneos(0);
+    setEscaneados([]);
+    setUltimoEscaneo(null);
+    setEscaneoContinuo(true);
+    setEscaneoVisible(true);
+  }
+
+  function cerrarEscaneo() {
+    colaLecturas.current = [];
+    setBusqueda('');
+    setEscaneoVisible(false);
+  }
+
+  function registrarCodigo(codigo) {
+    cerrarEscaneo();
+    navigation.navigate('ProductoForm', { codigoBarras: codigo });
+  }
+
+  function marcarEscaneado(id) {
+    setEscaneados((actual) => (actual.includes(id) ? actual : [...actual, id]));
+  }
+
   const cargarProductos = useCallback(async () => {
     if (!empresaId) {
       setProductos([]);
@@ -70,7 +113,7 @@ export default function VenderScreen() {
       setProductos(Array.isArray(datos) ? datos : []);
 
       if (productoDesdeParametro) {
-        setCarrito((actual) => ({
+        fijarCarrito((actual) => ({
           ...actual,
           [productoDesdeParametro]: Math.max(1, actual[productoDesdeParametro] ?? 0),
         }));
@@ -82,7 +125,7 @@ export default function VenderScreen() {
     } finally {
       setCargando(false);
     }
-  }, [empresaId, productoDesdeParametro, navigation]);
+  }, [empresaId, productoDesdeParametro, navigation, fijarCarrito]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,13 +135,23 @@ export default function VenderScreen() {
 
   const visibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
-    if (!texto) return productos;
-    return productos.filter(
-      (producto) =>
-        (producto.nombre || '').toLowerCase().includes(texto) ||
-        (producto.sku || '').toLowerCase().includes(texto)
-    );
-  }, [busqueda, productos]);
+    const filtrados = !texto
+      ? productos
+      : productos.filter(
+          (producto) =>
+            (producto.nombre || '').toLowerCase().includes(texto) ||
+            (producto.sku || '').toLowerCase().includes(texto)
+        );
+
+    if (escaneados.length === 0) return filtrados;
+
+    const orden = new Map(escaneados.map((id, indice) => [id, indice]));
+    return [...filtrados].sort((a, b) => {
+      const posA = orden.has(a.id) ? orden.get(a.id) : Number.MAX_SAFE_INTEGER;
+      const posB = orden.has(b.id) ? orden.get(b.id) : Number.MAX_SAFE_INTEGER;
+      return posA - posB;
+    });
+  }, [busqueda, productos, escaneados]);
 
   const lineas = useMemo(
     () =>
@@ -117,65 +170,87 @@ export default function VenderScreen() {
 
   function cambiarCantidad(producto, delta) {
     const stock = Number(producto.stock ?? producto.stock_actual ?? 0);
-    setCarrito((actual) => {
+    fijarCarrito((actual) => {
       const nueva = Math.max(0, Math.min(stock, (actual[producto.id] ?? 0) + delta));
       return { ...actual, [producto.id]: nueva };
     });
   }
 
   async function procesarCodigo(codigo) {
-    setEscaneoVisible(false);
-
     try {
       const producto = await obtenerProductoPorCodigo(codigo, empresaId);
 
       if (!producto) {
-        setDialogo({
-          visible: true,
-          tipo: 'advertencia',
-          titulo: 'Código no registrado',
-          mensaje: `No hay un producto con el código ${codigo}. ¿Deseas registrarlo?`,
-          textoConfirmar: 'Registrar',
-          textoCancelar: 'Cancelar',
-          onConfirmar: () => {
-            cerrarDialogo();
-            navigation.navigate('ProductoForm', { codigoBarras: codigo });
-          },
-          onCancelar: cerrarDialogo,
-        });
+        setUltimoEscaneo({ tipo: 'error', codigo });
         return;
       }
 
       const stock = Number(producto.stock ?? producto.stock_actual ?? 0);
+      const cantidadActual = carritoRef.current[producto.id] ?? 0;
+      const nombre = producto.nombre ?? 'Producto';
 
-      if (stock <= 0) {
-        setDialogo({
-          visible: true,
-          tipo: 'advertencia',
-          titulo: 'Sin existencia',
-          mensaje: `${producto.nombre} no tiene unidades disponibles.`,
-          textoConfirmar: 'Entendido',
-          textoCancelar: null,
-          onConfirmar: cerrarDialogo,
-        });
+      if (cantidadActual > 0) {
+        marcarEscaneado(producto.id);
+        setUltimoEscaneo({ tipo: 'duplicado', nombre, codigo });
         return;
       }
 
-      setCarrito((actual) => ({
+      if (stock <= 0) {
+        setUltimoEscaneo({ tipo: 'sin_stock', nombre, codigo });
+        return;
+      }
+
+      fijarCarrito((actual) => ({
         ...actual,
-        [producto.id]: Math.min(stock, (actual[producto.id] ?? 0) + 1),
+        [producto.id]: 1,
       }));
-      setBusqueda(producto.nombre ?? '');
+      setConteoEscaneos((actual) => actual + 1);
+      marcarEscaneado(producto.id);
+      setUltimoEscaneo({ tipo: 'ok', nombre, codigo });
     } catch (e) {
-      setDialogo({
-        visible: true,
-        tipo: 'advertencia',
-        titulo: 'No se pudo leer el código',
-        mensaje: mensajeError(e, 'No se pudo buscar el producto.'),
-        textoConfirmar: 'Entendido',
-        textoCancelar: null,
-        onConfirmar: cerrarDialogo,
+      setUltimoEscaneo({
+        tipo: 'error',
+        codigo,
+        detalle: mensajeError(e, 'No se pudo buscar el producto.'),
       });
+    }
+  }
+
+  async function procesarSiguienteCodigo() {
+    if (leyendoCodigo.current) return;
+
+    const codigo = colaLecturas.current.shift();
+    if (!codigo) return;
+
+    leyendoCodigo.current = true;
+    try {
+      await procesarCodigo(codigo);
+    } finally {
+      leyendoCodigo.current = false;
+      if (colaLecturas.current.length > 0) {
+        procesarSiguienteCodigo();
+      }
+    }
+  }
+
+  function encolarCodigo(codigo) {
+    colaLecturas.current.push(codigo);
+    procesarSiguienteCodigo();
+  }
+
+  async function descargarPdf() {
+    if (!ticketQr) return;
+
+    setDescargandoPdf(true);
+    try {
+      await descargarReciboPdf(ticketQr);
+    } catch (e) {
+      Alert.alert(
+        'No se pudo descargar el PDF',
+        mensajeError(e, 'Intenta nuevamente en unos segundos.')
+      );
+    } finally {
+      setDescargandoPdf(false);
     }
   }
 
@@ -252,7 +327,9 @@ export default function VenderScreen() {
         ventaId: ventaGuardada.id,
         visible: false,
       });
-      setCarrito({});
+      fijarCarrito({});
+      setEscaneados([]);
+      setBusqueda('');
       cargarProductos();
 
       setDialogo({
@@ -309,7 +386,7 @@ export default function VenderScreen() {
             onChangeText={setBusqueda}
             placeholder="Buscar producto para agregar..."
             iconoDerecha="barcode-outline"
-            onIconoDerechaPress={() => setEscaneoVisible(true)}
+            onIconoDerechaPress={abrirEscaneo}
           />
 
           <Boton
@@ -317,13 +394,17 @@ export default function VenderScreen() {
             icono="barcode-outline"
             variante="suave"
             tamano="sm"
-            onPress={() => setEscaneoVisible(true)}
+            onPress={abrirEscaneo}
             style={styles.botonEscanear}
           />
 
           <View style={styles.cabecera}>
             <Text style={styles.tituloSeccion}>Productos disponibles</Text>
-            <Text style={styles.contador}>{unidades} en el carrito</Text>
+            <Text style={styles.contador}>
+              {escaneados.length > 0
+                ? `${escaneados.length} escaneado${escaneados.length === 1 ? '' : 's'} · ${unidades} en carrito`
+                : `${unidades} en el carrito`}
+            </Text>
           </View>
 
           {cargando ? (
@@ -349,6 +430,7 @@ export default function VenderScreen() {
             visibles.map((producto) => {
               const cantidad = carrito[producto.id] ?? 0;
               const stock = Number(producto.stock ?? producto.stock_actual ?? 0);
+              const fueEscaneado = escaneados.includes(producto.id);
 
               return (
                 <View key={producto.id} style={[styles.fila, cantidad > 0 && styles.filaActiva]}>
@@ -362,9 +444,17 @@ export default function VenderScreen() {
                   </View>
 
                   <View style={styles.info}>
-                    <Text style={styles.nombre} numberOfLines={1}>
-                      {producto.nombre}
-                    </Text>
+                    <View style={styles.nombreFila}>
+                      <Text style={[styles.nombre, fueEscaneado && styles.nombreEscaneado]} numberOfLines={1}>
+                        {producto.nombre}
+                      </Text>
+                      {fueEscaneado ? (
+                        <View style={styles.insigniaEscaneado}>
+                          <Ionicons name="barcode-outline" size={10} color="#FFFFFF" />
+                          <Text style={styles.textoInsignia}>Escaneado</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text style={styles.detalle} numberOfLines={1}>
                       {producto.sku ? `${producto.sku} · ` : ''}Quedan {stock}
                     </Text>
@@ -425,8 +515,13 @@ export default function VenderScreen() {
 
         <EscaneadorCodigo
           visible={escaneoVisible}
-          onCerrar={() => setEscaneoVisible(false)}
-          onLeer={procesarCodigo}
+          continuo={escaneoContinuo}
+          conteo={conteoEscaneos}
+          ultimoEscaneo={ultimoEscaneo}
+          onCerrar={cerrarEscaneo}
+          onTerminar={cerrarEscaneo}
+          onRegistrar={registrarCodigo}
+          onLeer={encolarCodigo}
         />
 
         <DialogoConfirmacion
@@ -444,6 +539,8 @@ export default function VenderScreen() {
         <DialogoTicketQr
           visible={ticketQr?.visible ?? false}
           ticket={ticketQr}
+          descargando={descargandoPdf}
+          onDescargarPdf={descargarPdf}
           onCerrar={() => setTicketQr(null)}
           onVerDetalle={() => {
             const ventaId = ticketQr?.ventaId;
@@ -519,10 +616,33 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  nombreFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   nombre: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '700',
     color: colores.texto,
+  },
+  nombreEscaneado: {
+    color: colores.primarioContenedor,
+  },
+  insigniaEscaneado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radios.sm,
+    backgroundColor: colores.primarioContenedor,
+  },
+  textoInsignia: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
   detalle: {
     fontSize: 11,

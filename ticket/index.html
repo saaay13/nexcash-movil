@@ -43,7 +43,7 @@
         text-align: center;
       }
 
-      .marca h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; }
+      .marca h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; overflow-wrap: anywhere; }
       .marca p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
 
       .cuerpo { padding: 24px; }
@@ -119,6 +119,7 @@
       .boton:hover { background: #00457a; }
       .boton:disabled { background: #9ca3af; cursor: not-allowed; }
 
+      .aviso { text-align: center; color: var(--suave); font-size: 12px; margin: 10px 0 0; }
       .pie { text-align: center; color: var(--suave); font-size: 12px; margin-top: 18px; }
 
       @media (max-width: 420px) {
@@ -130,8 +131,8 @@
   <body>
     <main class="tarjeta">
       <header class="marca">
-        <h1>NexCash</h1>
-        <p>Comprobante de compra</p>
+        <h1 id="empresa">Comprobante de compra</h1>
+        <p>NexCash · Comprobante de compra</p>
       </header>
 
       <div class="cuerpo">
@@ -140,7 +141,7 @@
         <div id="contenido" hidden>
           <div class="encabezado-ticket">
             <h2 id="numero"></h2>
-            <span id="empresa"></span>
+            <span>NexCash</span>
           </div>
 
           <section class="datos">
@@ -167,6 +168,7 @@
           </section>
 
           <button id="descargar" class="boton" type="button">Descargar PDF</button>
+          <p id="avisoDescarga" class="aviso">Descargando tu comprobante...</p>
           <p class="pie">Gracias por comprar con NexCash.</p>
         </div>
       </div>
@@ -181,6 +183,7 @@
         var estado = document.getElementById('estado');
         var contenido = document.getElementById('contenido');
         var boton = document.getElementById('descargar');
+        var aviso = document.getElementById('avisoDescarga');
         var ticket = null;
 
         function texto(valor) {
@@ -277,10 +280,11 @@
           if (typeof window.jspdf === 'undefined') {
             boton.disabled = true;
             boton.textContent = 'PDF no disponible sin conexión';
+            if (aviso) aviso.textContent = 'Sin conexión: no se pudo preparar el PDF automáticamente.';
           }
         }
 
-        function generarPdf() {
+        function generarPdf(automatico) {
           if (!ticket || !window.jspdf) return;
 
           try {
@@ -298,9 +302,10 @@
               y += salto || 7;
             }
 
-            linea('NexCash', 22, true, 'centro', 9);
-            linea(seguro(ticket.empresa || 'NexCash'), 12, false, 'centro', 8);
-            linea('COMPROBANTE DE COMPRA', 10, true, 'centro', 12);
+            var nombreEmpresa = seguro(ticket.empresa || 'NexCash');
+            linea(nombreEmpresa, nombreEmpresa.length > 28 ? 16 : 20, true, 'centro', 5);
+            linea('NexCash', 9, false, 'centro', 8);
+            linea('COMPROBANTE DE COMPRA', 10, true, 'centro', 11);
             linea('Ticket #' + String(ticket.numero).padStart(3, '0'), 12, true, 'centro', 7);
 
             doc.setDrawColor(200, 205, 212);
@@ -361,17 +366,35 @@
             total(bs(ticket.total), 'TOTAL', true);
 
             y += 8;
-            linea('Gracias por comprar con NexCash.', 10, false, 'centro', 6);
+            linea('Gracias por comprar con ' + nombreEmpresa + '.', 10, false, 'centro', 5);
+            linea('Generado por NexCash', 8, false, 'centro', 6);
 
             doc.save('Ticket-' + String(ticket.numero).padStart(3, '0') + '.pdf');
+            if (automatico && aviso) {
+              aviso.textContent = 'Si no se descargó automáticamente, toca Descargar PDF.';
+            }
           } catch (error) {
-            window.alert('No se pudo generar el PDF. Intenta nuevamente.');
+            if (automatico) {
+              if (aviso) aviso.textContent = 'No se pudo descargar automáticamente. Toca Descargar PDF.';
+            } else {
+              window.alert('No se pudo generar el PDF. Intenta nuevamente.');
+            }
           }
         }
 
-        boton.addEventListener('click', generarPdf);
+        boton.addEventListener('click', function () {
+          generarPdf(false);
+        });
+
         var datosTicket = leerTicket();
-        if (datosTicket) renderizar(datosTicket);
+        if (datosTicket) {
+          renderizar(datosTicket);
+          if (typeof window.jspdf !== 'undefined') {
+            window.setTimeout(function () {
+              generarPdf(true);
+            }, 300);
+          }
+        }
       })();
     </script>
   </body>
