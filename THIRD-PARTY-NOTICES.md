@@ -26,10 +26,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Catálogo público DummyJSON
-
-La aplicación consulta la API pública de DummyJSON en tiempo de ejecución para mostrar y permitir importar productos del catálogo público al inventario. No se distribuye ni se incluye una copia de su base de datos.
-
 ## API pública Open Food Facts
 
 La opción opcional de búsqueda por código de barras consulta en tiempo de ejecución la API v3 de la familia Open Food Facts (Open Food Facts, Open Beauty Facts, Open Products Facts y Open Pet Food Facts), cuyos datos se publican bajo la Open Database License (ODbL). No se distribuye ni se incluye una copia de su base de datos. La consulta viene desactivada por defecto y se limita a 15 peticiones por minuto.

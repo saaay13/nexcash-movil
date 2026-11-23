@@ -406,7 +406,7 @@ export default function VenderScreen() {
         <EncabezadoTienda
           titulo="Vender"
           onMoneda={() => Alert.alert('Moneda', 'Moneda configurada: Bolivianos (Bs)')}
-          onPerfil={() => setDrawerVisible(true)}
+          onPerfil={() => navigation.navigate('Perfil')}
           onMenu={() => setDrawerVisible(true)}
           onTurno={() => navigation.navigate('Caja')}
         />

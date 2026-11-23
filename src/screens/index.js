@@ -8,7 +8,7 @@ export { default as ProductoFormScreen } from './ProductoFormScreen';
 export { default as VenderScreen } from './VenderScreen';
 export { default as HistorialScreen } from './HistorialScreen';
 export { default as VentaDetalleScreen } from './VentaDetalleScreen';
-export { default as CatalogoScreen } from './CatalogoScreen';
+export { default as PerfilScreen } from './PerfilScreen';
 export { default as CajaScreen } from './CajaScreen';
 export { default as CategoriasScreen } from './CategoriasScreen';
 export { default as MovimientosInventarioScreen } from './MovimientosInventarioScreen';

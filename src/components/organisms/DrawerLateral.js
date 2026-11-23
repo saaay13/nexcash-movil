@@ -177,18 +177,18 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
               onPress={() => navegarA('Caja')}
             />
 
-            <ItemMenu
-              icono="cloud-download-outline"
-              colorIcono="#0284C7"
-              fondoIcono="#E0F2FE"
-              titulo="Sincronizar Catálogo"
-              subtitulo="Importar desde API externa"
-              onPress={() => navegarA('Catalogo')}
-            />
-
             <View style={styles.divisor} />
 
             <Text style={styles.seccionTitulo}>ESPACIO Y CUENTA</Text>
+
+            <ItemMenu
+              icono="person-circle-outline"
+              colorIcono="#00539A"
+              fondoIcono="#E8F1FC"
+              titulo="Mi perfil"
+              subtitulo="Datos y opciones de tu cuenta"
+              onPress={() => navegarA('Perfil')}
+            />
 
             <ItemMenu
               icono="business-outline"

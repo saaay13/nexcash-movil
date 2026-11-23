@@ -80,9 +80,39 @@ export async function iniciarSesion(correo, password) {
 export async function obtenerUsuarioPorId(id) {
   const db = await obtenerBD();
   return db.getFirstAsync(
-    'SELECT id, nombre, correo, rol, creado_en FROM usuarios WHERE id = ?',
+    'SELECT id, nombre, correo, telefono, rol, creado_en FROM usuarios WHERE id = ?',
     Number(id)
   );
+}
+
+export async function actualizarPerfil({ id, nombre, correo, telefono }) {
+  const nombreLimpio = String(nombre ?? '').trim();
+  if (!nombreLimpio) {
+    throw new Error('El nombre es obligatorio.');
+  }
+
+  const correoLimpio = String(correo ?? '').trim().toLowerCase();
+  if (!correoLimpio || !correoLimpio.includes('@')) {
+    throw new Error('El correo no tiene un formato válido.');
+  }
+
+  const db = await obtenerBD();
+  try {
+    await db.runAsync(
+      'UPDATE usuarios SET nombre = ?, correo = ?, telefono = ? WHERE id = ?',
+      nombreLimpio,
+      correoLimpio,
+      String(telefono ?? '').trim() || null,
+      Number(id)
+    );
+  } catch (error) {
+    if (String(error?.message).includes('UNIQUE')) {
+      throw new Error('Ya existe un usuario registrado con ese correo.');
+    }
+    throw new Error(mensajeError(error, 'No se pudo guardar el perfil. Intenta nuevamente.'));
+  }
+
+  return obtenerUsuarioPorId(id);
 }
 
 export async function listarUsuarios() {

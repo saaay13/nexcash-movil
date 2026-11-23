@@ -20,6 +20,10 @@ export function SesionProvider({ children }) {
     setEmpresa(null);
   }, []);
 
+  const actualizarUsuario = useCallback((datos) => {
+    setUsuario((actual) => (actual ? { ...actual, ...datos } : actual));
+  }, []);
+
   const valor = useMemo(
     () => ({
       usuario,
@@ -28,9 +32,10 @@ export function SesionProvider({ children }) {
       empresaId: empresa?.id ?? null,
       iniciarSesion,
       seleccionarEmpresa,
+      actualizarUsuario,
       cerrarSesion,
     }),
-    [usuario, empresa, iniciarSesion, seleccionarEmpresa, cerrarSesion]
+    [usuario, empresa, iniciarSesion, seleccionarEmpresa, actualizarUsuario, cerrarSesion]
   );
 
   return <SesionContext.Provider value={valor}>{children}</SesionContext.Provider>;

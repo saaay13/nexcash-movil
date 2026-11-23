@@ -1,6 +1,3 @@
-const URL_CATALOGO =
-  'https://dummyjson.com/products?limit=10&select=id,title,price,category,thumbnail';
-
 const URL_OPEN_FOOD_FACTS = 'https://world.openfoodfacts.org/api/v3/product';
 const CAMPOS_OPEN_FOOD_FACTS = [
   'code',
@@ -18,24 +15,6 @@ const AGENTE_USUARIO = 'NexCash/1.0 (https://github.com/saaay13/nexcash-movil)';
 const LIMITE_CONSULTAS = 15;
 const VENTANA_CONSULTAS_MS = 60 * 1000;
 const marcasDeConsulta = [];
-
-export async function obtenerCatalogo() {
-  const respuesta = await fetch(URL_CATALOGO);
-
-  if (!respuesta.ok) {
-    throw new Error(`La API respondió con estado ${respuesta.status}`);
-  }
-
-  const datos = await respuesta.json();
-
-  return datos.products.map((producto) => ({
-    id: producto.id,
-    nombre: producto.title,
-    categoria: producto.category,
-    precio: producto.price,
-    imagen: producto.thumbnail,
-  }));
-}
 
 function limpiarConsultasAntiguas(ahora) {
   while (

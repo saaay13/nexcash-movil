@@ -17,7 +17,7 @@ import {
   VenderScreen,
   HistorialScreen,
   VentaDetalleScreen,
-  CatalogoScreen,
+  PerfilScreen,
   CajaScreen,
   CategoriasScreen,
   MovimientosInventarioScreen,
@@ -73,7 +73,7 @@ export default function App() {
               <Stack.Screen name="Principal" component={NavegadorPrincipal} />
               <Stack.Screen name="ProductoForm" component={ProductoFormScreen} />
               <Stack.Screen name="VentaDetalle" component={VentaDetalleScreen} />
-              <Stack.Screen name="Catalogo" component={CatalogoScreen} />
+              <Stack.Screen name="Perfil" component={PerfilScreen} />
               <Stack.Screen name="Categorias" component={CategoriasScreen} />
               <Stack.Screen name="MovimientosInventario" component={MovimientosInventarioScreen} />
             </Stack.Navigator>

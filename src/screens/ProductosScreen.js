@@ -93,7 +93,7 @@ export default function ProductosScreen() {
         tienda
         titulo="Productos"
         onMoneda={() => {}}
-        onPerfil={() => setDrawerVisible(true)}
+        onPerfil={() => navigation.navigate('Perfil')}
         onMenu={() => setDrawerVisible(true)}
       >
 
@@ -142,22 +142,13 @@ export default function ProductosScreen() {
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <Boton
-            titulo="API"
-            icono="cloud-download-outline"
-            tamano="sm"
-            variante="tonal"
-            onPress={() => navigation.navigate('Catalogo')}
-          />
-          <Boton
-            titulo="Nuevo"
-            icono="add"
-            tamano="sm"
-            style={styles.botonNuevo}
-            onPress={() => navigation.navigate('ProductoForm')}
-          />
-        </View>
+        <Boton
+          titulo="Nuevo"
+          icono="add"
+          tamano="sm"
+          style={styles.botonNuevo}
+          onPress={() => navigation.navigate('ProductoForm')}
+        />
       </View>
 
       {filtrados.length === 0 ? (

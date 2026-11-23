@@ -27,7 +27,7 @@ const PURPLE = colores.terciario;
 
 export default function InicioScreen() {
   const navigation = useNavigation();
-  const { usuario, empresa, empresaId, cerrarSesion } = useSesion();
+  const { usuario, empresa, empresaId } = useSesion();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [listaProductos, setListaProductos] = useState([]);
@@ -74,29 +74,7 @@ export default function InicioScreen() {
 
   const aviso = (nombre, detalle) => Alert.alert(nombre, detalle);
 
-  const abrirPerfil = () => {
-    Alert.alert(
-      'Perfil y espacio de trabajo',
-      `${usuario?.nombre ?? 'Usuario'}\n${usuario?.correo ?? ''}\nEmpresa: ${
-        empresa?.nombre ?? 'Sin empresa'
-      }`,
-      [
-        { text: 'Aceptar', style: 'default' },
-        {
-          text: 'Cambiar de empresa',
-          onPress: () => navigation.navigate('EmpresaSeleccion'),
-        },
-        {
-          text: 'Cerrar sesión',
-          style: 'destructive',
-          onPress: () => {
-            cerrarSesion();
-            navigation.replace('Bienvenida');
-          },
-        },
-      ]
-    );
-  };
+  const abrirPerfil = () => navigation.navigate('Perfil');
 
   const criticos = listaProductos.filter(
     (p) => (p.stock_actual ?? p.stock ?? 0) <= (p.stock_minimo ?? 5)

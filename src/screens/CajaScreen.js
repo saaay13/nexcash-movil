@@ -297,7 +297,7 @@ export default function CajaScreen() {
       tienda
       titulo="Caja y Arqueo"
       onMoneda={() => {}}
-      onPerfil={() => setDrawerVisible(true)}
+      onPerfil={() => navigation.navigate('Perfil')}
       onMenu={() => setDrawerVisible(true)}
       onTurno={() => {}}
     >

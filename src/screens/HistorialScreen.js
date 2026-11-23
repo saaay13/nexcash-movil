@@ -66,7 +66,7 @@ export default function HistorialScreen() {
       tienda
       titulo="Ventas"
       onMoneda={() => {}}
-      onPerfil={() => setDrawerVisible(true)}
+      onPerfil={() => navigation.navigate('Perfil')}
       onMenu={() => setDrawerVisible(true)}
       onTurno={() => navigation.navigate('Caja')}
     >

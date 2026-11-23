@@ -1,4 +1,4 @@
-import { ejecutarTransaccion, obtenerBD } from './conexion';
+import { obtenerBD } from './conexion';
 
 function esNumero(valor) {
   return valor !== '' && valor !== null && valor !== undefined && Number.isFinite(Number(valor));
@@ -294,41 +294,4 @@ export async function eliminarProducto(id, empresaId) {
   }
 
   return { id, eliminado: true };
-}
-
-export async function importarDesdeApi(productosApi, empresaId) {
-  const empresa = empresaValida(empresaId);
-  if (!empresa) {
-    throw new Error('No hay una empresa activa para importar productos.');
-  }
-
-  const db = await obtenerBD();
-  let insertados = 0;
-
-  await ejecutarTransaccion(db, async (txn) => {
-    for (const item of productosApi) {
-      const existe = await txn.getFirstAsync(
-        'SELECT id FROM productos WHERE api_id = ?',
-        item.id
-      );
-
-      if (!existe) {
-        await txn.runAsync(
-          `INSERT INTO productos
-            (empresa_id, api_id, nombre, categoria, precio_compra, precio_venta,
-             stock_actual, stock_minimo, imagen)
-           VALUES (?, ?, ?, ?, 0, ?, 0, 5, ?)`,
-          empresa,
-          item.id,
-          item.nombre,
-          item.categoria ?? 'General',
-          Number(item.precio ?? 0),
-          item.imagen ?? null
-        );
-        insertados++;
-      }
-    }
-  });
-
-  return insertados;
 }

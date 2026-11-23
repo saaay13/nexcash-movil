@@ -11,7 +11,7 @@ Este repositorio se publica únicamente para revisión, presentación y evaluaci
 - Registro e inicio de sesión con usuarios reales almacenados en SQLite.
 - Gestión de empresas, vinculación por código y selección de negocio activo.
 - Administración de categorías, productos, existencias y movimientos de inventario.
-- Importación opcional de productos desde el catálogo público de DummyJSON.
+- Perfil de usuario con datos editables, espacio de trabajo y opciones de cuenta.
 - Apertura y cierre de turnos de caja, con ingresos, egresos y arqueo.
 - Registro de ventas con control de existencias y caja abierta obligatoria.
 - Historial de ventas, detalle de comprobantes y compartir ticket.
@@ -52,7 +52,7 @@ También está disponible el script `npm run web`.
 4. Si el código no existe, el aviso muestra **Registrar**: se abre **Nuevo producto** con el código ya cargado y el carrito se conserva.
 5. Cuando termines, toca **Terminar escaneo** y después **Confirmar cobro**.
 6. En **Nuevo producto** también puedes tocar **Escanear código de barras** para llenar el SKU sin escribirlo. Esa lectura es única: la cámara se cierra al leer.
-7. Dentro de la cámara aparece **Buscar datos en la API (opcional)**. Viene **desactivada**: en ese modo solo se lee el código y tú completas el resto de los campos, que es el comportamiento habitual. Si la activas, los códigos que no estén en tu inventario se consultan en Open Food Facts y se sugieren nombre, descripción y categoría al abrir **Nuevo producto**. El precio, la existencia y la categoría definitiva siempre los pones tú.
+7. Dentro de la cámara aparece **Buscar datos en la API**. Viene **desactivada**: en ese modo solo se lee el código y tú completas el resto de los campos, que es el comportamiento habitual. Si la activas, los códigos que no estén en tu inventario se consultan en Open Food Facts y se sugieren nombre, descripción y categoría al abrir **Nuevo producto**. El precio, la existencia y la categoría definitiva siempre los pones tú.
 
 La consulta usa `product_type=all`, por lo que encuentra productos de **alimentos, belleza/higiene, productos generales y mascotas**. Por ejemplo, el desodorante **Old Spice Leña de 50 g** (`7506339390230`) se encuentra en Open Beauty Facts.
 
@@ -66,7 +66,7 @@ El escaneo agrega **una sola unidad por producto**. Si vuelves a escanear un pro
 
 Además, se ignora el mismo código durante 1,5 segundos mientras lo mantienes enfrente, para evitar lecturas repetidas del mismo instante.
 
-Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Los productos importados de DummyJSON no traen código de barras: asígnale un SKU al crearlos para poder escanearlos después. En web, abre la app desde `localhost` o HTTPS y permite el acceso a la cámara del navegador.
+Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Todos los productos se crean en la app: asígnale un SKU o un código de barras al registrarlos para poder escanearlos después. En web, abre la app desde `localhost` o HTTPS y permite el acceso a la cámara del navegador.
 
 ## Cómo crear un producto con su categoría
 
@@ -76,6 +76,10 @@ Se pueden leer EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, ITF-14 y QR. Los 
 4. Completa nombre, descripción (opcional), precio, existencia y mínimo para alerta, y toca **Registrar producto**.
 
 El producto queda asociado a la categoría elegida: aparece en ese filtro y se suma al conteo de la categoría. El mínimo para alerta es configurable por producto (por defecto 5): cuando la existencia sea menor o igual a ese número, el producto se marca como crítico.
+
+## Cómo abrir tu perfil
+
+Toca el ícono de persona que aparece en la esquina superior derecha de cualquier pantalla. Abre **Mi perfil**, donde puedes ver y editar nombre, correo y teléfono, revisar tu empresa y rol, cambiar de negocio o cerrar sesión. El menú lateral sigue abriéndose con el ícono de menú de la esquina superior izquierda. También hay un acceso **Mi perfil** dentro de ese menú.
 
 ## Cómo entregar el comprobante al cliente
 
@@ -129,6 +133,6 @@ Cuando el proceso termine, descarga el APK desde el enlace que muestra EAS o des
 - `src/screens/`: pantallas de la aplicación.
 - `src/database/`: esquema, conexión y operaciones SQLite.
 - `src/context/`: estado global de sesión.
-- `src/services/`: consumo de la API pública de DummyJSON.
+- `src/services/`: consulta opcional a la API pública de Open Food Facts y generación de comprobantes.
 - `src/theme/`: colores y estilos compartidos.
 - `assets/`: iconos e imagen de marca referenciados por `app.json`.
