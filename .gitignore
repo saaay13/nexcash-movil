@@ -1,0 +1,65 @@
+# Dependencias
+node_modules/
+
+# Configuración local y caché de Expo
+.expo/
+.expo-shared/
+dist/
+dist-web/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Carpetas nativas generadas por Expo
+/android/
+/ios/
+.kotlin/
+
+# Compilaciones y artefactos
+*.apk
+*.aab
+*.ipa
+*.app
+build/
+
+# Bases de datos locales
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+credentials.json
+
+# Registros y herramientas internas
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.vscode/
+.idea/
+.claude/
+AGENTS.md
+.tmp/
+.tmp-scripts/
+coverage/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.orig.*
