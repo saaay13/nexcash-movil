@@ -152,10 +152,14 @@ export default function HistorialScreen() {
             </View>
 
             <View style={styles.derecha}>
-              <Text style={styles.monto}>{bs(venta.total)}</Text>
+              <Text style={styles.monto} numberOfLines={1}>
+                {bs(venta.total)}
+              </Text>
               <View style={styles.estadoLinea}>
                 <Ionicons name="checkmark-circle" size={13} color={colores.exito} />
-                <Text style={styles.estado}>Completado</Text>
+                <Text style={styles.estado} numberOfLines={1}>
+                  Completado
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colores.contornoSuave} />
             </View>
@@ -273,6 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: colores.superficieBaja,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   folioTexto: {
     color: colores.primarioContenedor,
@@ -328,6 +333,8 @@ const styles = StyleSheet.create({
   derecha: {
     alignItems: 'flex-end',
     gap: 3,
+    minWidth: 96,
+    flexShrink: 0,
   },
   monto: {
     fontSize: 15,

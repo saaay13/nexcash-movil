@@ -136,7 +136,7 @@
       </header>
 
       <div class="cuerpo">
-        <div id="estado" class="estado">Leyendo el ticket...</div>
+        <div id="estado" class="estado">Preparando tu comprobante...</div>
 
         <div id="contenido" hidden>
           <div class="encabezado-ticket">
@@ -168,14 +168,16 @@
           </section>
 
           <button id="descargar" class="boton" type="button">Descargar PDF</button>
-          <p id="avisoDescarga" class="aviso">Descargando tu comprobante...</p>
+          <p id="avisoDescarga" class="aviso">
+            Descargando tu comprobante. Si no inicia, toca el botón de abajo.
+          </p>
           <p class="pie">Gracias por comprar con NexCash.</p>
         </div>
       </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="vendor/lz-string.min.js"></script>
+    <script src="vendor/jspdf.umd.min.js"></script>
     <script>
       (function () {
         'use strict';
@@ -198,6 +200,44 @@
           return 'Bs ' + Number(valor || 0).toFixed(2);
         }
 
+        function normalizar(datos) {
+          if (!datos || typeof datos !== 'object') return null;
+
+          var compacto = Array.isArray(datos.i) && datos.n !== undefined;
+          var origen = compacto ? datos.i : datos.items;
+          if (!Array.isArray(origen)) return null;
+
+          var numero = texto(compacto ? datos.n : datos.numero);
+          if (!numero) return null;
+
+          return {
+            numero: numero,
+            fecha: texto(compacto ? datos.f : datos.fecha),
+            empresa: texto(compacto ? datos.e : datos.empresa),
+            vendedor: texto(compacto ? datos.v : datos.vendedor),
+            metodo: texto(compacto ? datos.m : datos.metodo),
+            items: origen.map(function (item) {
+              if (Array.isArray(item)) {
+                return {
+                  nombre: item[0],
+                  cantidad: item[1],
+                  precio: item[2],
+                  subtotal: item[3],
+                };
+              }
+              return {
+                nombre: item && item.nombre,
+                cantidad: item && item.cantidad,
+                precio: item && item.precio,
+                subtotal: item && item.subtotal,
+              };
+            }),
+            subtotal: Number(compacto ? datos.s : datos.subtotal) || 0,
+            descuento: Number(compacto ? datos.d : datos.descuento) || 0,
+            total: Number(compacto ? datos.t : datos.total) || 0,
+          };
+        }
+
         function mostrarError(mensaje) {
           estado.textContent = mensaje;
           estado.classList.add('error');
@@ -211,16 +251,14 @@
             return null;
           }
           if (typeof LZString === 'undefined') {
-            mostrarError('No se pudo cargar el lector del ticket. Revisa tu conexión e intenta nuevamente.');
+            mostrarError('No se pudo cargar el lector del ticket. Recarga la página e intenta nuevamente.');
             return null;
           }
           try {
             var json = LZString.decompressFromEncodedURIComponent(comprimido);
             if (!json) throw new Error('vacio');
-            var datos = JSON.parse(json);
-            if (!datos || !datos.numero || !Array.isArray(datos.items)) {
-              throw new Error('formato');
-            }
+            var datos = normalizar(JSON.parse(json));
+            if (!datos) throw new Error('formato');
             return datos;
           } catch (error) {
             mostrarError('No se pudo leer el ticket. Pide al vendedor que genere uno nuevo.');
@@ -279,8 +317,8 @@
 
           if (typeof window.jspdf === 'undefined') {
             boton.disabled = true;
-            boton.textContent = 'PDF no disponible sin conexión';
-            if (aviso) aviso.textContent = 'Sin conexión: no se pudo preparar el PDF automáticamente.';
+            boton.textContent = 'PDF no disponible';
+            if (aviso) aviso.textContent = 'No se pudo preparar el PDF. Recarga la página para intentarlo de nuevo.';
           }
         }
 
@@ -371,11 +409,12 @@
 
             doc.save('Ticket-' + String(ticket.numero).padStart(3, '0') + '.pdf');
             if (automatico && aviso) {
-              aviso.textContent = 'Si no se descargó automáticamente, toca Descargar PDF.';
+              aviso.textContent =
+                'Si no se descargó automáticamente, toca Descargar PDF. En iPhone o iPad, usa el botón de compartir para guardarlo.';
             }
           } catch (error) {
             if (automatico) {
-              if (aviso) aviso.textContent = 'No se pudo descargar automáticamente. Toca Descargar PDF.';
+              if (aviso) aviso.textContent = 'No se pudo descargar automáticamente. Toca Descargar PDF para intentarlo de nuevo.';
             } else {
               window.alert('No se pudo generar el PDF. Intenta nuevamente.');
             }

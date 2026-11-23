@@ -31,29 +31,43 @@ export default function FilaVenta({ venta, onPress }) {
         </Text>
 
         <View style={styles.saleMeta}>
-          <Text style={styles.saleMetaText}>
+          <Text style={styles.saleMetaText} numberOfLines={1}>
             {cantidadTexto}
           </Text>
           <Text style={styles.dot}>·</Text>
-          <Text
+          <View
             style={[
               styles.methodTag,
               {
-                color: esQr ? colores.terciario : colores.primarioContenedor,
                 backgroundColor: esQr ? '#F2D9FA' : '#E2EEFF',
               },
             ]}
           >
-            {esQr ? 'QR Simple' : 'Efectivo'}
-          </Text>
+            <Text
+              style={[
+                styles.methodTagTexto,
+                { color: esQr ? colores.terciario : colores.primarioContenedor },
+              ]}
+              numberOfLines={1}
+            >
+              {esQr ? 'QR Simple' : 'Efectivo'}
+            </Text>
+          </View>
           <Text style={styles.dot}>·</Text>
-          <Text style={styles.saleMetaText}>{horaTexto}</Text>
+          <Text style={styles.saleMetaText} numberOfLines={1}>
+            {horaTexto}
+          </Text>
         </View>
       </View>
 
       <View style={styles.saleAmountWrap}>
-        <Text style={styles.saleAmount}>{bs(venta.total)}</Text>
-        <Text style={[styles.saleStatus, { color: esQr ? colores.terciario : '#0066B5' }]}>
+        <Text style={styles.saleAmount} numberOfLines={1}>
+          {bs(venta.total)}
+        </Text>
+        <Text
+          style={[styles.saleStatus, { color: esQr ? colores.terciario : '#0066B5' }]}
+          numberOfLines={1}
+        >
           {esQr ? 'QR Banco' : 'Completado'}
         </Text>
       </View>
@@ -63,7 +77,7 @@ export default function FilaVenta({ venta, onPress }) {
 
 const styles = StyleSheet.create({
   saleRow: {
-    minHeight: 79,
+    minHeight: 84,
     backgroundColor: colores.superficie,
     borderRadius: radios.xl,
     paddingHorizontal: 12,
@@ -80,10 +94,12 @@ const styles = StyleSheet.create({
     borderRadius: radios.md,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   saleInfo: {
     flex: 1,
     minWidth: 0,
+    paddingRight: 2,
   },
   saleName: {
     color: colores.texto,
@@ -93,29 +109,36 @@ const styles = StyleSheet.create({
   saleMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     marginTop: 3,
-    flexWrap: 'wrap',
+    minWidth: 0,
   },
   saleMetaText: {
     color: colores.textoSuave,
     fontSize: 10,
+    flexShrink: 1,
   },
   dot: {
     color: '#7C8491',
     fontSize: 11,
+    flexShrink: 0,
   },
   methodTag: {
-    fontSize: 9,
-    fontWeight: '700',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 5,
     overflow: 'hidden',
+    flexShrink: 0,
+  },
+  methodTagTexto: {
+    fontSize: 9,
+    fontWeight: '700',
   },
   saleAmountWrap: {
     alignItems: 'flex-end',
     marginLeft: 2,
+    minWidth: 84,
+    flexShrink: 0,
   },
   saleAmount: {
     color: colores.texto,

@@ -259,13 +259,17 @@ export async function descargarReciboPdf(ticket) {
   const { uri } = await Print.printToFileAsync({ html });
 
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      UTI: 'com.adobe.pdf',
-      mimeType: 'application/pdf',
-      dialogTitle: 'Comprobante de compra',
-    });
-    return;
+    try {
+      await Sharing.shareAsync(uri, {
+        UTI: '.pdf',
+        mimeType: 'application/pdf',
+        dialogTitle: 'Comprobante de compra',
+      });
+      return;
+    } catch (error) {
+      console.warn('No se pudo compartir el PDF. Se abre la impresión.', error);
+    }
   }
 
-  await Print.printAsync({ html });
+  await Print.printAsync({ uri });
 }

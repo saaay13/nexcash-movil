@@ -85,11 +85,11 @@ Toca el ícono de persona que aparece en la esquina superior derecha de cualquie
 
 1. Con la caja abierta, registra la venta y toca **Confirmar cobro**.
 2. En el aviso de **¡Venta completada!**, toca **Generar QR**.
-3. Muestra el QR al cliente. Al escanearlo se abre la página del comprobante y **el PDF se descarga automáticamente**. Si el navegador bloquea la descarga automática, aparece el botón **Descargar PDF** para que lo toque.
-4. El PDF incluye el código QR y todos los datos en **texto plano** (producto, cantidad, precio, subtotal y total), para que no haga falta escanearlo con otra aplicación.
+3. Muestra el QR al cliente. El cliente necesita **conexión a internet**: al escanearlo se abre la página del comprobante y **el PDF se descarga automáticamente**. Si el navegador bloquea la descarga automática, aparece el botón **Descargar PDF** para que lo toque. En iPhone o iPad, el cliente debe usar el botón de compartir para guardar el archivo.
+4. El comprobante muestra todos los datos en **texto plano** (producto, cantidad, precio, subtotal y total). El PDF lleva el nombre de la empresa en grande y **NexCash** en pequeño.
 5. En la app, **Descargar copia local** guarda un ejemplar para el vendedor (en el celular se abre compartir/guardar; en web, el diálogo de impresión). **Ver detalle** consulta la venta dentro de NexCash.
 
-El QR lleva los datos del ticket comprimidos dentro de la propia URL; no se envía información a ningún servidor. La página del comprobante se sirve desde la carpeta `ticket/` de este repositorio mediante GitHub Pages:
+El QR lleva los datos del ticket comprimidos dentro de la propia URL; no se suben a una base de datos ni a un servicio externo. Para que el QR sea más fácil de escanear, el enlace usa claves cortas y guarda los artículos como arreglos. Los QR generados antes siguen abriéndose correctamente. La página del comprobante se sirve desde la carpeta `ticket/` de este repositorio mediante GitHub Pages:
 
 `https://saaay13.github.io/nexcash-movil/ticket/`
 
@@ -102,7 +102,7 @@ Si el enlace todavía no abre, activa Pages en el repositorio:
 3. Selecciona la rama `main` y la carpeta `/ (root)`, y guarda.
 4. Espera unos instantes y vuelve a probar la URL.
 
-Si el sitio queda publicado en otra ruta, actualiza `URL_BASE_TICKET` en `src/services/ticket.js` con la URL real. El enlace funciona con conexión a internet; las librerías del visor y del PDF se cargan desde CDN.
+Si el sitio queda publicado en otra ruta, actualiza `URL_BASE_TICKET` en `src/services/ticket.js` con la URL real. El enlace requiere internet, pero el visor y el generador de PDF ya están incluidos en `ticket/vendor/`: no dependen de CDN.
 
 ## Verificación
 
@@ -135,4 +135,5 @@ Cuando el proceso termine, descarga el APK desde el enlace que muestra EAS o des
 - `src/context/`: estado global de sesión.
 - `src/services/`: consulta opcional a la API pública de Open Food Facts y generación de comprobantes.
 - `src/theme/`: colores y estilos compartidos.
+- `ticket/`: página pública del comprobante y librerías locales en `ticket/vendor/`.
 - `assets/`: iconos e imagen de marca referenciados por `app.json`.

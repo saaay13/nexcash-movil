@@ -280,6 +280,7 @@ export default function VenderScreen() {
     try {
       await descargarReciboPdf(ticketQr);
     } catch (e) {
+      console.error('Error al descargar el comprobante local', e);
       Alert.alert(
         'No se pudo descargar el PDF',
         mensajeError(e, 'Intenta nuevamente en unos segundos.')

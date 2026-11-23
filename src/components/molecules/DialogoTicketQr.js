@@ -42,8 +42,10 @@ export default function DialogoTicketQr({
 
             <Text style={styles.titulo}>Tu ticket está listo</Text>
             <Text style={styles.mensaje}>
-              Muestra este QR al cliente: al escanearlo se abre su comprobante y se
-              descarga el PDF de su compra. Aquí puedes guardar una copia local.
+              Muestra este QR al cliente: con conexión a internet, al escanearlo se
+              abre su comprobante y el PDF se descarga automáticamente. Si no se
+              descarga, el cliente puede tocar Descargar PDF. Aquí guardas tu copia
+              local.
             </Text>
 
             <View style={styles.resumen}>
@@ -62,10 +64,20 @@ export default function DialogoTicketQr({
             </View>
 
             <View style={styles.qrCaja}>
-              <CodigoQr valor={ticket.enlace} tamano={210} />
+              <CodigoQr valor={ticket.enlace} tamano={260} />
             </View>
 
-            <Text style={styles.hiperlink}>{ticket.enlace}</Text>
+            <Text style={styles.aviso}>
+              El cliente necesita internet para abrir el comprobante.
+            </Text>
+
+            <Text
+              style={styles.hiperlink}
+              numberOfLines={1}
+              ellipsizeMode="middle"
+            >
+              {ticket.enlace}
+            </Text>
 
             <Boton
               titulo="Descargar copia local"
@@ -176,11 +188,18 @@ const styles = StyleSheet.create({
     borderColor: colores.borde,
     borderRadius: radios.lg,
   },
+  aviso: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: colores.textoSuave,
+    textAlign: 'center',
+    marginTop: espacios.sm,
+  },
   hiperlink: {
     fontSize: 9,
     color: colores.primarioContenedor,
     textAlign: 'center',
-    marginTop: espacios.sm,
+    marginTop: espacios.xs,
     marginBottom: espacios.md,
   },
   botonPdf: {
