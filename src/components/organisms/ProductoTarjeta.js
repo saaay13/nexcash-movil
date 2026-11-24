@@ -1,7 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bs, colores, espacios, radios, sombras, tipografia } from '../../theme';
-import SelectorCantidad from '../molecules/SelectorCantidad';
+import SelectorCantidad from '../molecules';
 import Boton  from '../atoms/Boton';
 import Etiqueta from '../atoms/Etiqueta';
 
@@ -23,13 +23,13 @@ export default function ProductoTarjeta({
   const noDisponible = estaInactivo || estaEliminado;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.tarjeta, pressed && styles.presionado]}
-      onPress={onPress}
-      accessibilityRole="button"
-    >
-      <View style={styles.filaPrincipal}>
-
+    <View style={styles.tarjeta}>
+      <Pressable
+        style={({ pressed }) => [styles.filaPrincipal, pressed && styles.presionado]}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Editar ${producto.nombre ?? 'producto'}`}
+      >
         <View
           style={[
             styles.miniatura,
@@ -92,7 +92,7 @@ export default function ProductoTarjeta({
             />
           </View>
         </View>
-      </View>
+      </Pressable>
 
       <View style={styles.pieFila}>
         {accionReactivar ? (
@@ -130,7 +130,7 @@ export default function ProductoTarjeta({
           </>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 

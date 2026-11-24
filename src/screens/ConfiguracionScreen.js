@@ -36,7 +36,7 @@ export default function ConfiguracionScreen() {
         />
         <View style={styles.divisor} />
         <FilaConfiguracion
-          icono="vibrate-outline"
+          icono="phone-portrait-outline"
           colorIcono="#5E0086"
           fondoIcono="#F5E8FF"
           titulo="Vibración al escanear"
