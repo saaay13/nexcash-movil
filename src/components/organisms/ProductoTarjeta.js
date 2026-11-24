@@ -60,7 +60,9 @@ export default function ProductoTarjeta({
                 <Text style={styles.punto}>·</Text>
               </>
             ) : null}
-            <Text style={styles.sku}>{producto.sku ?? producto.codigo_barras ?? 'PROD'}</Text>
+            <Text style={styles.sku}>
+              {producto.sku || producto.codigo_barras || 'Sin código'}
+            </Text>
             {producto.unidad ? (
               <>
                 <Text style={styles.punto}>·</Text>

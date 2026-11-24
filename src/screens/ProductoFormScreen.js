@@ -54,7 +54,7 @@ export default function ProductoFormScreen() {
   const [stockMinimo, setStockMinimo] = useState(
     producto ? String(producto.stock_minimo ?? 5) : '5'
   );
-  const [imagen, setImagen] = useState(producto?.imagen ?? null);
+  const [imagen, setImagen] = useState(producto?.imagen ?? datosApi?.imagen ?? null);
   const [cargandoFoto, setCargandoFoto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -411,12 +411,14 @@ export default function ProductoFormScreen() {
       setNombre((actual) => actual || datos.nombre);
       setDescripcion((actual) => actual || datos.descripcion);
       setCategoria((actual) => actual || datos.categoria);
+      setImagen((actual) => actual || datos.imagen || null);
       setDialogo({
         visible: true,
         tipo: 'exito',
         titulo: 'Datos obtenidos de la API',
-        mensaje:
-          'Se completaron nombre, descripción y categoría sugerida. Verifica la información y agrega precio, existencia y tu categoría.',
+        mensaje: datos.imagen
+          ? 'Se completaron nombre, descripción, categoría y foto sugerida. Verifica la información y agrega precio, existencia y tu categoría.'
+          : 'Se completaron nombre, descripción y categoría sugerida. La API no incluyó foto; puedes agregarla manualmente. Verifica la información y agrega precio, existencia y tu categoría.',
         textoConfirmar: 'Entendido',
         textoCancelar: null,
         onConfirmar: cerrarDialogo,
@@ -508,7 +510,7 @@ export default function ProductoFormScreen() {
         etiqueta="Nombre del producto *"
         valor={nombre}
         onChangeText={setNombre}
-        placeholder="Ej. Arroz Grano de Oro 1kg"
+        placeholder="Ej. Cuaderno A4 100 hojas"
         icono="pricetag-outline"
       />
 
@@ -516,7 +518,7 @@ export default function ProductoFormScreen() {
         etiqueta="Descripción"
         valor={descripcion}
         onChangeText={setDescripcion}
-        placeholder="Ej. Presentación de 1 kg, grano largo, empaque sellado"
+        placeholder="Ej. Tamaño A4, 100 hojas, empaque de 10 unidades"
         icono="document-text-outline"
         multiline
         numberOfLines={3}
@@ -556,14 +558,17 @@ export default function ProductoFormScreen() {
       </View>
 
       <Campo
-        etiqueta="Código o SKU"
+        etiqueta="Código o SKU (opcional)"
         valor={sku}
         onChangeText={setSku}
-        placeholder="ARR-1000"
+        placeholder="SKU-1000"
         sufijo="barcode-outline"
         onSufijoPress={() => setEscaneoVisible(true)}
         autoCapitalize="characters"
       />
+      <Text style={styles.ayudaSku}>
+        Déjalo vacío si el producto no tiene código de barras.
+      </Text>
 
       <Boton
         titulo="Escanear código de barras"
@@ -990,6 +995,13 @@ const styles = StyleSheet.create({
     marginBottom: espacios.sm,
   },
   ayudaMinimo: {
+    fontSize: 11,
+    color: colores.textoSuave,
+    marginTop: -espacios.sm,
+    marginBottom: espacios.md,
+    marginLeft: 4,
+  },
+  ayudaSku: {
     fontSize: 11,
     color: colores.textoSuave,
     marginTop: -espacios.sm,

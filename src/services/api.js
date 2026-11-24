@@ -9,7 +9,13 @@ const CAMPOS_OPEN_FOOD_FACTS = [
   'brands',
   'categories',
   'quantity',
+  'packaging',
+  'stores',
+  'countries',
   'image_front_url',
+  'image_front_small_url',
+  'image_url',
+  'image_small_url',
 ].join(',');
 const AGENTE_USUARIO = 'NexCash/1.0 (https://github.com/saaay13/nexcash-movil)';
 const LIMITE_CONSULTAS = 15;
@@ -23,6 +29,19 @@ function limpiarConsultasAntiguas(ahora) {
   ) {
     marcasDeConsulta.shift();
   }
+}
+
+function textoApi(valor) {
+  return String(valor ?? '').trim();
+}
+
+function listaCorta(valor, maximo = 3) {
+  return textoApi(valor)
+    .split(',')
+    .map((parte) => parte.trim())
+    .filter(Boolean)
+    .slice(0, maximo)
+    .join(', ');
 }
 
 function quitarPalabrasRepetidas(texto) {
@@ -126,10 +145,30 @@ export async function consultarProductoPorCodigo(codigo) {
         .join(' ')
     : nombre.charAt(0).toUpperCase() + nombre.slice(1);
 
+  const generico = textoApi(producto.generic_name);
+  const envase = textoApi(producto.packaging);
+  const paises = listaCorta(producto.countries);
+  const tiendas = listaCorta(producto.stores);
+
   const detalles = [];
   if (marca) detalles.push(`Marca: ${marca}`);
   if (presentacion) detalles.push(`Presentación: ${presentacion}`);
-  detalles.push('Fuente: Open Food Facts');
+  if (generico && generico.toLowerCase() !== nombre.toLowerCase()) {
+    detalles.push(`Tipo: ${generico}`);
+  }
+  if (envase) detalles.push(`Envase: ${envase}`);
+  if (paises) detalles.push(`País: ${paises}`);
+  if (tiendas) detalles.push(`Tiendas: ${tiendas}`);
+
+  const imagen = String(
+    producto.image_front_url ||
+      producto.image_front_small_url ||
+      producto.image_url ||
+      producto.image_small_url ||
+      ''
+  )
+    .trim()
+    .replace(/^http:\/\//, 'https://');
 
   return {
     codigo: String(producto.code ?? codigoLimpio),
@@ -137,6 +176,6 @@ export async function consultarProductoPorCodigo(codigo) {
     descripcion: detalles.join(' · '),
     marca,
     categoria: String(producto.categories ?? '').trim(),
-    imagen: String(producto.image_front_url ?? '').trim(),
+    imagen,
   };
 }

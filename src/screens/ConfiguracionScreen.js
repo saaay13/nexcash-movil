@@ -104,6 +104,10 @@ export default function ConfiguracionScreen() {
           <Ionicons name="chevron-forward" size={18} color={colores.contornoSuave} />
         </Pressable>
       </View>
+
+      <View style={styles.marcaAgua} pointerEvents="box-none">
+        <Text style={styles.marcaAguaTexto}>Kehila Molina · Josue Arroyo</Text>
+      </View>
     </Pantalla>
   );
 }
@@ -179,5 +183,17 @@ const styles = StyleSheet.create({
     color: colores.texto,
     letterSpacing: 1,
     marginTop: 4,
+  },
+  marcaAgua: {
+    marginTop: espacios.xl,
+    marginBottom: espacios.md,
+    alignItems: 'center',
+    opacity: 0.32,
+  },
+  marcaAguaTexto: {
+    fontSize: 10,
+    color: colores.textoSuave,
+    fontStyle: 'italic',
+    letterSpacing: 1.1,
   },
 });
