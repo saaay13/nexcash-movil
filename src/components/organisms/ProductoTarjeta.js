@@ -1,8 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bs, colores, espacios, radios, sombras, tipografia } from '../../theme';
-import SelectorCantidad from '../molecules';
-import Boton  from '../atoms/Boton';
+import SelectorCantidad from '../molecules/SelectorCantidad';
+import Boton from '../atoms/Boton';
 import Etiqueta from '../atoms/Etiqueta';
 
 export default function ProductoTarjeta({
