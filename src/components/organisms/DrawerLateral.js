@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -16,18 +15,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colores, espacios, radios, sombras } from '../../theme';
-import { useConfiguracion, useSesion } from '../../context';
+import { useSesion } from '../../context';
 
 const ANCHO_DRAWER = Math.min(320, Dimensions.get('window').width * 0.82);
 
 export default function DrawerLateral({ visible, onClose, navigation }) {
   const insets = useSafeAreaInsets();
   const { usuario, empresa, cerrarSesion } = useSesion();
-  const {
-    sonidoEscaneo,
-    vibracionEscaneo,
-    cambiarPreferencia,
-  } = useConfiguracion();
   const animacionX = useMemo(() => new Animated.Value(-ANCHO_DRAWER), []);
   const opacidadFondo = useMemo(() => new Animated.Value(0), []);
 
@@ -140,14 +134,6 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
               </Text>
             </View>
 
-            {empresa?.codigo_vinculacion || empresa?.codigo_privado ? (
-              <View style={styles.codigoBadge}>
-                <Ionicons name="key-outline" size={13} color="#D4E2FF" />
-                <Text style={styles.codigoTexto}>
-                  Código: {empresa.codigo_vinculacion || empresa.codigo_privado}
-                </Text>
-              </View>
-            ) : null}
           </LinearGradient>
 
           <ScrollView
@@ -196,24 +182,13 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
 
             <Text style={styles.seccionTitulo}>CONFIGURACIÓN</Text>
 
-            <FilaConfiguracion
-              icono="volume-high-outline"
+            <ItemMenu
+              icono="settings-outline"
               colorIcono="#00539A"
               fondoIcono="#E8F1FC"
-              titulo="Sonido al escanear"
-              subtitulo="Pitido al agregar un producto a la venta"
-              valor={sonidoEscaneo}
-              onCambiar={(valor) => cambiarPreferencia('sonidoEscaneo', valor)}
-            />
-
-            <FilaConfiguracion
-              icono="vibrate-outline"
-              colorIcono="#5E0086"
-              fondoIcono="#F5E8FF"
-              titulo="Vibración al escanear"
-              subtitulo="Aviso tangible en el mismo momento"
-              valor={vibracionEscaneo}
-              onCambiar={(valor) => cambiarPreferencia('vibracionEscaneo', valor)}
+              titulo="Configuración"
+              subtitulo="Avisos, código de empresa y productos ocultos"
+              onPress={() => navegarA('Configuracion')}
             />
 
             <View style={styles.divisor} />
@@ -267,6 +242,7 @@ function ItemMenu({
   subtitulo,
   onPress,
   peligro = false,
+  iconoDerecha = 'chevron-forward',
 }) {
   return (
     <TouchableOpacity
@@ -283,38 +259,8 @@ function ItemMenu({
         </Text>
         {subtitulo ? <Text style={styles.itemSub}>{subtitulo}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colores.contornoSuave} />
+      <Ionicons name={iconoDerecha} size={16} color={colores.contornoSuave} />
     </TouchableOpacity>
-  );
-}
-
-function FilaConfiguracion({
-  icono,
-  colorIcono,
-  fondoIcono,
-  titulo,
-  subtitulo,
-  valor,
-  onCambiar,
-}) {
-  return (
-    <View style={styles.itemFila}>
-      <View style={[styles.iconoCaja, { backgroundColor: fondoIcono }]}>
-        <Ionicons name={icono} size={20} color={colorIcono} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.itemTitulo}>{titulo}</Text>
-        {subtitulo ? <Text style={styles.itemSub}>{subtitulo}</Text> : null}
-      </View>
-      <Switch
-        value={Boolean(valor)}
-        onValueChange={onCambiar}
-        trackColor={{ false: '#CBD5E1', true: colores.primarioContenedor }}
-        thumbColor="#FFFFFF"
-        ios_backgroundColor="#CBD5E1"
-        accessibilityLabel={titulo}
-      />
-    </View>
   );
 }
 
@@ -387,22 +333,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
-  },
-  codigoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: espacios.md,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radios.full,
-  },
-  codigoTexto: {
-    color: '#D4E2FF',
-    fontSize: 11,
-    fontWeight: '700',
   },
   listaMenu: {
     padding: espacios.md,

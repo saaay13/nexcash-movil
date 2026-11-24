@@ -12,8 +12,8 @@ function empresaValida(empresaId) {
 function normalizarEstado(estado) {
   if (estado === undefined || estado === null || estado === '') return 'activo';
   const valor = String(estado).toLowerCase();
-  if (!['activo', 'inactivo'].includes(valor)) {
-    throw new Error('El estado del producto debe ser activo o inactivo.');
+  if (!['activo', 'inactivo', 'eliminado'].includes(valor)) {
+    throw new Error('El estado del producto debe ser activo, inactivo o eliminado.');
   }
   return valor;
 }
@@ -123,6 +123,8 @@ export async function obtenerProductos({
   categoria = '',
   soloCriticos = false,
   incluirInactivos = false,
+  incluirEliminados = false,
+  estado = null,
 } = {}) {
   const empresa = empresaValida(empresaId);
   if (!empresa) return [];
@@ -131,9 +133,16 @@ export async function obtenerProductos({
   const condiciones = ['p.empresa_id = ?'];
   const parametros = [empresa];
 
-  if (!incluirInactivos) {
-    condiciones.push('p.activo = 1');
-    condiciones.push("p.estado = 'activo'");
+  if (estado) {
+    condiciones.push('p.estado = ?');
+    parametros.push(normalizarEstado(estado));
+  } else {
+    if (!incluirInactivos) {
+      condiciones.push('p.activo = 1');
+      condiciones.push("p.estado = 'activo'");
+    } else if (!incluirEliminados) {
+      condiciones.push("p.estado <> 'eliminado'");
+    }
   }
 
   if (categoria && categoria !== 'Todos' && categoria !== 'Critico') {
@@ -330,4 +339,12 @@ export async function cambiarEstadoProducto(id, estado, empresaId) {
   }
 
   return { id: Number(id), estado: estadoNormalizado };
+}
+
+export async function eliminarProducto(id, empresaId) {
+  return cambiarEstadoProducto(id, 'eliminado', empresaId);
+}
+
+export async function reactivarProducto(id, empresaId) {
+  return cambiarEstadoProducto(id, 'activo', empresaId);
 }

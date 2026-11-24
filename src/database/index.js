@@ -1,5 +1,5 @@
-import { obtenerBD, registrarBD } from './conexion';
-import { ESQUEMA_TABLAS, INDICES } from './esquema';
+import { ejecutarTransaccion, obtenerBD, registrarBD } from './conexion';
+import { ESQUEMA_TABLAS, INDICES, TABLA_PRODUCTOS } from './esquema';
 
 export * from './conexion';
 export * from './configuracion';
@@ -12,7 +12,26 @@ export * from './inventario';
 export * from './caja';
 export * from './ventas';
 
-const VERSION_ESQUEMA = 4;
+const VERSION_ESQUEMA = 5;
+
+const COLUMNAS_PRODUCTOS = [
+  'id',
+  'empresa_id',
+  'categoria_id',
+  'categoria',
+  'nombre',
+  'descripcion',
+  'codigo_barras',
+  'precio_compra',
+  'precio_venta',
+  'stock_actual',
+  'stock_minimo',
+  'imagen',
+  'estado',
+  'activo',
+  'api_id',
+  'creado_en',
+];
 
 const COLUMNAS_TABLAS = {
   empresas: [
@@ -155,12 +174,52 @@ async function migrarColumnas(db) {
   }
 }
 
+async function migrarEstadoProductos(db) {
+  const fila = await db.getFirstAsync(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'productos'"
+  );
+  const sqlActual = String(fila?.sql ?? '');
+  if (!sqlActual || sqlActual.includes("'eliminado'")) return;
+
+  const columnas = COLUMNAS_PRODUCTOS.join(', ');
+  const crearTemporal = TABLA_PRODUCTOS.replace(
+    'CREATE TABLE IF NOT EXISTS productos',
+    'CREATE TABLE IF NOT EXISTS productos_estado_migracion'
+  );
+
+  await db.execAsync('PRAGMA foreign_keys = OFF;');
+  try {
+    await ejecutarTransaccion(db, async (txn) => {
+      const sql = txn && typeof txn.execAsync === 'function' ? txn : db;
+      await sql.execAsync('DROP TABLE IF EXISTS productos_estado_migracion;');
+      await sql.execAsync(crearTemporal);
+      await sql.execAsync(
+        `INSERT INTO productos_estado_migracion (${columnas})
+         SELECT ${columnas} FROM productos;`
+      );
+      await sql.execAsync('DROP TABLE productos;');
+      await sql.execAsync(
+        'ALTER TABLE productos_estado_migracion RENAME TO productos;'
+      );
+      await sql.execAsync(
+        "UPDATE productos SET estado = 'activo' WHERE estado IS NULL OR estado = '';"
+      );
+      await sql.execAsync(
+        "UPDATE productos SET activo = CASE WHEN estado = 'activo' THEN 1 ELSE 0 END;"
+      );
+    });
+  } finally {
+    await db.execAsync('PRAGMA foreign_keys = ON;');
+  }
+}
+
 export async function iniciarBD(dbExterna) {
   const db = dbExterna ? registrarBD(dbExterna) : await obtenerBD();
 
   await db.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   await db.execAsync(ESQUEMA_TABLAS);
   await migrarColumnas(db);
+  await migrarEstadoProductos(db);
   await db.runAsync(
     `UPDATE empresas
      SET correo_contacto = (

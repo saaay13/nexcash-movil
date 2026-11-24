@@ -22,6 +22,8 @@ import {
   CategoriasScreen,
   MovimientosInventarioScreen,
   HistorialCajaScreen,
+  ProductosEliminadosScreen,
+  ConfiguracionScreen,
 } from './src/screens';
 
 import { BarraPestanas } from './src/components/organisms';
@@ -79,6 +81,11 @@ export default function App() {
                 <Stack.Screen name="Categorias" component={CategoriasScreen} />
                 <Stack.Screen name="MovimientosInventario" component={MovimientosInventarioScreen} />
                 <Stack.Screen name="HistorialCaja" component={HistorialCajaScreen} />
+                <Stack.Screen
+                  name="ProductosEliminados"
+                  component={ProductosEliminadosScreen}
+                />
+                <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
               </Stack.Navigator>
             </NavigationContainer>
           </SesionProvider>

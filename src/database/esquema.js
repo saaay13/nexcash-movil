@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS productos (
   stock_actual INTEGER NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
   stock_minimo INTEGER NOT NULL DEFAULT 5 CHECK (stock_minimo >= 0),
   imagen TEXT,
-  estado TEXT NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo')),
+  estado TEXT NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo', 'eliminado')),
   activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1)),
   api_id INTEGER UNIQUE,
   creado_en TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))

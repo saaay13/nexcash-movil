@@ -76,8 +76,10 @@ export default function ProductoFormScreen() {
     setDialogo((d) => ({ ...d, visible: false }));
   }
 
-  const estaInactivo =
-    (producto?.estado ?? (Number(producto?.activo) === 0 ? 'inactivo' : 'activo')) === 'inactivo';
+  const estadoProducto =
+    producto?.estado ?? (Number(producto?.activo) === 0 ? 'inactivo' : 'activo');
+  const estaInactivo = estadoProducto === 'inactivo';
+  const estaEliminado = estadoProducto === 'eliminado';
 
   const cargarCategorias = useCallback(async () => {
     if (!empresaId) {
@@ -292,6 +294,98 @@ export default function ProductoFormScreen() {
     }
   }
 
+  function confirmarEliminacion() {
+    setDialogo({
+      visible: true,
+      tipo: 'peligro',
+      titulo: '¿Eliminar producto?',
+      mensaje: `"${nombre}" dejará de aparecer en el catálogo. Podrás reactivarlo desde Configuración → Productos eliminados.`,
+      textoConfirmar: 'Eliminar',
+      textoCancelar: 'Cancelar',
+      onConfirmar: ejecutarEliminacion,
+      onCancelar: cerrarDialogo,
+    });
+  }
+
+  async function ejecutarEliminacion() {
+    try {
+      setCargando(true);
+      await cambiarEstadoProducto(producto.id, 'eliminado', empresaId);
+      setDialogo({
+        visible: true,
+        tipo: 'exito',
+        titulo: 'Producto eliminado',
+        mensaje: 'El producto ya no aparece en el catálogo. Puedes reactivarlo desde Configuración.',
+        textoConfirmar: 'Aceptar',
+        textoCancelar: null,
+        onConfirmar: () => {
+          cerrarDialogo();
+          navigation.goBack();
+        },
+        onCancelar: null,
+      });
+    } catch (err) {
+      setDialogo({
+        visible: true,
+        tipo: 'advertencia',
+        titulo: 'No se pudo eliminar',
+        mensaje: mensajeError(err, 'No se pudo actualizar el producto.'),
+        textoConfirmar: 'Entendido',
+        textoCancelar: null,
+        onConfirmar: cerrarDialogo,
+        onCancelar: null,
+      });
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  function confirmarReactivacion() {
+    setDialogo({
+      visible: true,
+      tipo: 'exito',
+      titulo: '¿Reactivar producto?',
+      mensaje: `"${nombre}" volverá a estar disponible para la venta.`,
+      textoConfirmar: 'Reactivar',
+      textoCancelar: 'Cancelar',
+      onConfirmar: ejecutarReactivacion,
+      onCancelar: cerrarDialogo,
+    });
+  }
+
+  async function ejecutarReactivacion() {
+    try {
+      setCargando(true);
+      await cambiarEstadoProducto(producto.id, 'activo', empresaId);
+      setDialogo({
+        visible: true,
+        tipo: 'exito',
+        titulo: 'Producto reactivado',
+        mensaje: 'El producto ya está disponible para la venta.',
+        textoConfirmar: 'Aceptar',
+        textoCancelar: null,
+        onConfirmar: () => {
+          cerrarDialogo();
+          navigation.goBack();
+        },
+        onCancelar: null,
+      });
+    } catch (err) {
+      setDialogo({
+        visible: true,
+        tipo: 'advertencia',
+        titulo: 'No se pudo reactivar',
+        mensaje: mensajeError(err, 'No se pudo actualizar el producto.'),
+        textoConfirmar: 'Entendido',
+        textoCancelar: null,
+        onConfirmar: cerrarDialogo,
+        onCancelar: null,
+      });
+    } finally {
+      setCargando(false);
+    }
+  }
+
   async function procesarLectura(codigo, conApi) {
     setSku(codigo);
     setEscaneoVisible(false);
@@ -363,6 +457,16 @@ export default function ProductoFormScreen() {
           </Text>
         </View>
       </View>
+
+      {estaEliminado ? (
+        <View style={styles.avisoEliminado}>
+          <Ionicons name="trash-outline" size={18} color="#B45309" />
+          <Text style={styles.avisoEliminadoTexto}>
+            Este producto está eliminado: no aparece en el catálogo ni se puede vender.
+            Reactívalo para volver a usarlo.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.fotoBloque}>
         <Text style={styles.categoriaEtiqueta}>Foto del producto (opcional)</Text>
@@ -519,20 +623,41 @@ export default function ProductoFormScreen() {
       </View>
 
       {producto?.id ? (
-        <View style={{ marginTop: espacios.md }}>
-          <Boton
-            titulo={
-              estaInactivo
-                ? 'Habilitar producto'
-                : cargando
-                  ? 'Deshabilitando...'
-                  : 'Deshabilitar producto'
-            }
-            icono={estaInactivo ? 'eye-outline' : 'eye-off-outline'}
-            variante={estaInactivo ? 'tonal' : 'peligro'}
-            deshabilitado={cargando}
-            onPress={confirmarCambioEstado}
-          />
+        <View style={styles.accionesEstado}>
+          {estaEliminado ? (
+            <Boton
+              titulo={cargando ? 'Reactivando...' : 'Reactivar producto'}
+              icono="refresh-outline"
+              variante="acento"
+              deshabilitado={cargando}
+              onPress={confirmarReactivacion}
+            />
+          ) : (
+            <>
+              <Boton
+                titulo={
+                  estaInactivo
+                    ? 'Habilitar producto'
+                    : cargando
+                      ? 'Deshabilitando...'
+                      : 'Deshabilitar producto'
+                }
+                icono={estaInactivo ? 'eye-outline' : 'eye-off-outline'}
+                variante={estaInactivo ? 'tonal' : 'peligro'}
+                deshabilitado={cargando}
+                onPress={confirmarCambioEstado}
+              />
+
+              <Boton
+                titulo="Eliminar producto"
+                icono="trash-outline"
+                variante="peligro"
+                deshabilitado={cargando}
+                onPress={confirmarEliminacion}
+                style={styles.botonEliminar}
+              />
+            </>
+          )}
         </View>
       ) : null}
 
@@ -678,6 +803,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colores.textoSuave,
     marginTop: 2,
+  },
+  avisoEliminado: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espacios.sm,
+    backgroundColor: '#FEF3C7',
+    borderRadius: radios.lg,
+    padding: espacios.md,
+    marginBottom: espacios.lg,
+  },
+  avisoEliminadoTexto: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#92400E',
+  },
+  accionesEstado: {
+    marginTop: espacios.md,
+    gap: espacios.sm,
+  },
+  botonEliminar: {
+    marginTop: 0,
   },
   fotoBloque: {
     marginBottom: espacios.md,

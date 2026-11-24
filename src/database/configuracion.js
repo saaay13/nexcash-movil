@@ -3,20 +3,23 @@ import { obtenerBD } from './conexion';
 const CLAVES = {
   sonidoEscaneo: 'sonido_escaneo',
   vibracionEscaneo: 'vibracion_escaneo',
+  mostrarCodigoEmpresa: 'mostrar_codigo_empresa',
 };
 
 export async function obtenerPreferenciasEscaneo() {
   const db = await obtenerBD();
   const filas = await db.getAllAsync(
-    'SELECT clave, valor FROM configuracion WHERE clave IN (?, ?)',
+    'SELECT clave, valor FROM configuracion WHERE clave IN (?, ?, ?)',
     CLAVES.sonidoEscaneo,
-    CLAVES.vibracionEscaneo
+    CLAVES.vibracionEscaneo,
+    CLAVES.mostrarCodigoEmpresa
   );
   const valores = new Map(filas.map((fila) => [fila.clave, Number(fila.valor) !== 0]));
 
   return {
     sonidoEscaneo: valores.get(CLAVES.sonidoEscaneo) ?? true,
     vibracionEscaneo: valores.get(CLAVES.vibracionEscaneo) ?? true,
+    mostrarCodigoEmpresa: valores.get(CLAVES.mostrarCodigoEmpresa) ?? false,
   };
 }
 

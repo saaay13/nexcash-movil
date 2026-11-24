@@ -111,7 +111,7 @@ export default function EmpresaSeleccionScreen() {
         visible: true,
         tipo: 'exito',
         titulo: '¡Empresa registrada!',
-        mensaje: `Tu negocio ha sido creado exitosamente.\n\nCódigo privado: ${nueva.codigo_privado}\n\nComparte este código con tus empleados para que se vinculen.`,
+        mensaje: 'Tu negocio ha sido creado exitosamente. Ya puedes entrar y comenzar a registrar tus productos.\n\nSi necesitas el código de acceso para vincular empleados, revélalo desde Configuración con el ícono del ojo.',
         textoConfirmar: 'Entrar al negocio',
         textoCancelar: null,
         onConfirmar: () => {
@@ -257,11 +257,6 @@ export default function EmpresaSeleccionScreen() {
               <Text style={styles.empresaDireccion} numberOfLines={1}>
                 {emp.direccion || 'Tarija · Bolivia'}
               </Text>
-
-              <View style={styles.codigoBadge}>
-                <Ionicons name="key-outline" size={13} color={colores.textoSuave} />
-                <Text style={styles.codigoTexto}>Código: {emp.codigo_privado}</Text>
-              </View>
             </View>
 
             <Etiqueta

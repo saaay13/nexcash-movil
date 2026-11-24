@@ -143,7 +143,6 @@ export default function PerfilScreen() {
     .map((parte) => parte.charAt(0).toUpperCase())
     .join('');
   const rol = (empresa?.rol ?? usuario?.rol) === 'admin' ? 'Administrador' : 'Vendedor';
-  const codigo = empresa?.codigo_vinculacion || empresa?.codigo_privado;
 
   return (
     <Pantalla
@@ -266,7 +265,6 @@ export default function PerfilScreen() {
         <View style={styles.filas}>
           <FilaDato etiqueta="Empresa" valor={empresa?.nombre || 'Sin empresa activa'} />
           <FilaDato etiqueta="Rol en la empresa" valor={rol} />
-          {codigo ? <FilaDato etiqueta="Código de acceso" valor={codigo} /> : null}
           {empresa?.direccion ? (
             <FilaDato etiqueta="Dirección" valor={empresa.direccion} />
           ) : null}

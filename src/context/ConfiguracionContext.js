@@ -12,6 +12,7 @@ preload(sonidoEscaneo);
 const PREFERENCIAS_INICIALES = {
   sonidoEscaneo: true,
   vibracionEscaneo: true,
+  mostrarCodigoEmpresa: false,
 };
 
 const ConfiguracionContext = createContext(null);
@@ -55,6 +56,7 @@ export function ConfiguracionProvider({ children }) {
     () => ({
       sonidoEscaneo: preferencias.sonidoEscaneo,
       vibracionEscaneo: preferencias.vibracionEscaneo,
+      mostrarCodigoEmpresa: preferencias.mostrarCodigoEmpresa,
       cambiarPreferencia,
       notificarEscaneo,
     }),

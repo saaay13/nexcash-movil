@@ -13,3 +13,5 @@ export { default as CajaScreen } from './CajaScreen';
 export { default as CategoriasScreen } from './CategoriasScreen';
 export { default as MovimientosInventarioScreen } from './MovimientosInventarioScreen';
 export { default as HistorialCajaScreen } from './HistorialCajaScreen';
+export { default as ProductosEliminadosScreen } from './ProductosEliminadosScreen';
+export { default as ConfiguracionScreen } from './ConfiguracionScreen';

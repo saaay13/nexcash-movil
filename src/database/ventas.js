@@ -88,7 +88,11 @@ export async function registrarVenta({
         empresa
       );
 
-      if (!prod || Number(prod.activo) === 0 || prod.estado === 'inactivo') {
+      if (
+        !prod ||
+        Number(prod.activo) === 0 ||
+        ['inactivo', 'eliminado'].includes(prod.estado)
+      ) {
         throw new Error(`El producto #${item.productoId} no está disponible en esta empresa.`);
       }
 

@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bs, colores, espacios, radios, sombras, tipografia } from '../../theme';
 import SelectorCantidad from '../molecules/SelectorCantidad';
-import Boton from '../atoms/Boton';
+import Boton  from '../atoms/Boton';
 import Etiqueta from '../atoms/Etiqueta';
 
 export default function ProductoTarjeta({
@@ -12,12 +12,15 @@ export default function ProductoTarjeta({
   onSumar,
   onCobrar,
   onPress,
+  accionReactivar = null,
 }) {
   const stock = producto.stock ?? producto.stock_actual ?? 0;
   const stockMinimo = producto.stock_minimo ?? 5;
   const esCritico = stock <= stockMinimo;
   const estado = producto.estado ?? (Number(producto.activo) === 0 ? 'inactivo' : 'activo');
   const estaInactivo = estado === 'inactivo';
+  const estaEliminado = estado === 'eliminado';
+  const noDisponible = estaInactivo || estaEliminado;
 
   return (
     <Pressable
@@ -46,7 +49,12 @@ export default function ProductoTarjeta({
           </Text>
 
           <View style={styles.metaFila}>
-            {estaInactivo ? (
+            {estaEliminado ? (
+              <>
+                <Etiqueta texto="Eliminado" variante="error" punto />
+                <Text style={styles.punto}>·</Text>
+              </>
+            ) : estaInactivo ? (
               <>
                 <Etiqueta texto="Inactivo" variante="error" punto />
                 <Text style={styles.punto}>·</Text>
@@ -85,21 +93,40 @@ export default function ProductoTarjeta({
       </View>
 
       <View style={styles.pieFila}>
-        <SelectorCantidad
-          valor={cantidad}
-          onRestar={onRestar}
-          onSumar={onSumar}
-          deshabilitado={estaInactivo}
-        />
+        {accionReactivar ? (
+          <Boton
+            titulo="Reactivar"
+            icono="refresh-outline"
+            tamano="sm"
+            variante="acento"
+            onPress={accionReactivar}
+            style={styles.botonReactivar}
+          />
+        ) : (
+          <>
+            <SelectorCantidad
+              valor={cantidad}
+              onRestar={onRestar}
+              onSumar={onSumar}
+              deshabilitado={noDisponible}
+            />
 
-        <Boton
-          titulo={estaInactivo ? 'No disponible' : cantidad > 0 ? `Cobrar (${cantidad})` : 'Cobrar'}
-          icono={estaInactivo ? 'eye-off-outline' : 'cart-outline'}
-          tamano="sm"
-          variante={estaInactivo ? 'suave' : cantidad > 0 ? 'acento' : 'primario'}
-          deshabilitado={estaInactivo}
-          onPress={onCobrar}
-        />
+            <Boton
+              titulo={
+                noDisponible
+                  ? 'No disponible'
+                  : cantidad > 0
+                    ? `Cobrar (${cantidad})`
+                    : 'Cobrar'
+              }
+              icono={noDisponible ? 'eye-off-outline' : 'cart-outline'}
+              tamano="sm"
+              variante={noDisponible ? 'suave' : cantidad > 0 ? 'acento' : 'primario'}
+              deshabilitado={noDisponible}
+              onPress={onCobrar}
+            />
+          </>
+        )}
       </View>
     </Pressable>
   );
@@ -190,5 +217,8 @@ const styles = StyleSheet.create({
     paddingTop: espacios.sm,
     borderTopWidth: 1,
     borderTopColor: '#F0F3FA',
+  },
+  botonReactivar: {
+    width: '100%',
   },
 });
