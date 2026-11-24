@@ -26,7 +26,7 @@ import {
 
 import { BarraPestanas } from './src/components/organisms';
 
-import { SesionProvider } from './src/context';
+import { ConfiguracionProvider, SesionProvider } from './src/context';
 import { iniciarBD } from './src/database';
 
 const Stack = createNativeStackNavigator();
@@ -54,33 +54,35 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SQLiteProvider databaseName="nexcash.db" onInit={iniciarBD}>
-        <SesionProvider>
-          <StatusBar style="light" />
-          <NavigationContainer>
-            <Stack.Navigator
-              initialRouteName="Bienvenida"
-              screenOptions={{
-                headerShown: false,
-                animation: 'slide_from_right',
-                gestureEnabled: true,
-                gestureDirection: 'horizontal',
-                fullScreenGestureEnabled: true,
-              }}
-            >
-              <Stack.Screen name="Bienvenida" component={BienvenidaScreen} />
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Registro" component={RegistroScreen} />
-              <Stack.Screen name="EmpresaSeleccion" component={EmpresaSeleccionScreen} />
-              <Stack.Screen name="Principal" component={NavegadorPrincipal} />
-              <Stack.Screen name="ProductoForm" component={ProductoFormScreen} />
-              <Stack.Screen name="VentaDetalle" component={VentaDetalleScreen} />
-              <Stack.Screen name="Perfil" component={PerfilScreen} />
-              <Stack.Screen name="Categorias" component={CategoriasScreen} />
-              <Stack.Screen name="MovimientosInventario" component={MovimientosInventarioScreen} />
-              <Stack.Screen name="HistorialCaja" component={HistorialCajaScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </SesionProvider>
+        <ConfiguracionProvider>
+          <SesionProvider>
+            <StatusBar style="light" />
+            <NavigationContainer>
+              <Stack.Navigator
+                initialRouteName="Bienvenida"
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'slide_from_right',
+                  gestureEnabled: true,
+                  gestureDirection: 'horizontal',
+                  fullScreenGestureEnabled: true,
+                }}
+              >
+                <Stack.Screen name="Bienvenida" component={BienvenidaScreen} />
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="Registro" component={RegistroScreen} />
+                <Stack.Screen name="EmpresaSeleccion" component={EmpresaSeleccionScreen} />
+                <Stack.Screen name="Principal" component={NavegadorPrincipal} />
+                <Stack.Screen name="ProductoForm" component={ProductoFormScreen} />
+                <Stack.Screen name="VentaDetalle" component={VentaDetalleScreen} />
+                <Stack.Screen name="Perfil" component={PerfilScreen} />
+                <Stack.Screen name="Categorias" component={CategoriasScreen} />
+                <Stack.Screen name="MovimientosInventario" component={MovimientosInventarioScreen} />
+                <Stack.Screen name="HistorialCaja" component={HistorialCajaScreen} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </SesionProvider>
+        </ConfiguracionProvider>
       </SQLiteProvider>
     </SafeAreaProvider>
   );

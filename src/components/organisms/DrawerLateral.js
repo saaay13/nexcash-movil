@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -15,13 +16,18 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colores, espacios, radios, sombras } from '../../theme';
-import { useSesion } from '../../context';
+import { useConfiguracion, useSesion } from '../../context';
 
 const ANCHO_DRAWER = Math.min(320, Dimensions.get('window').width * 0.82);
 
 export default function DrawerLateral({ visible, onClose, navigation }) {
   const insets = useSafeAreaInsets();
   const { usuario, empresa, cerrarSesion } = useSesion();
+  const {
+    sonidoEscaneo,
+    vibracionEscaneo,
+    cambiarPreferencia,
+  } = useConfiguracion();
   const animacionX = useMemo(() => new Animated.Value(-ANCHO_DRAWER), []);
   const opacidadFondo = useMemo(() => new Animated.Value(0), []);
 
@@ -188,6 +194,30 @@ export default function DrawerLateral({ visible, onClose, navigation }) {
 
             <View style={styles.divisor} />
 
+            <Text style={styles.seccionTitulo}>CONFIGURACIÓN</Text>
+
+            <FilaConfiguracion
+              icono="volume-high-outline"
+              colorIcono="#00539A"
+              fondoIcono="#E8F1FC"
+              titulo="Sonido al escanear"
+              subtitulo="Pitido al agregar un producto a la venta"
+              valor={sonidoEscaneo}
+              onCambiar={(valor) => cambiarPreferencia('sonidoEscaneo', valor)}
+            />
+
+            <FilaConfiguracion
+              icono="vibrate-outline"
+              colorIcono="#5E0086"
+              fondoIcono="#F5E8FF"
+              titulo="Vibración al escanear"
+              subtitulo="Aviso tangible en el mismo momento"
+              valor={vibracionEscaneo}
+              onCambiar={(valor) => cambiarPreferencia('vibracionEscaneo', valor)}
+            />
+
+            <View style={styles.divisor} />
+
             <Text style={styles.seccionTitulo}>ESPACIO Y CUENTA</Text>
 
             <ItemMenu
@@ -255,6 +285,36 @@ function ItemMenu({
       </View>
       <Ionicons name="chevron-forward" size={16} color={colores.contornoSuave} />
     </TouchableOpacity>
+  );
+}
+
+function FilaConfiguracion({
+  icono,
+  colorIcono,
+  fondoIcono,
+  titulo,
+  subtitulo,
+  valor,
+  onCambiar,
+}) {
+  return (
+    <View style={styles.itemFila}>
+      <View style={[styles.iconoCaja, { backgroundColor: fondoIcono }]}>
+        <Ionicons name={icono} size={20} color={colorIcono} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.itemTitulo}>{titulo}</Text>
+        {subtitulo ? <Text style={styles.itemSub}>{subtitulo}</Text> : null}
+      </View>
+      <Switch
+        value={Boolean(valor)}
+        onValueChange={onCambiar}
+        trackColor={{ false: '#CBD5E1', true: colores.primarioContenedor }}
+        thumbColor="#FFFFFF"
+        ios_backgroundColor="#CBD5E1"
+        accessibilityLabel={titulo}
+      />
+    </View>
   );
 }
 

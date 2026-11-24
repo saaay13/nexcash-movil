@@ -26,7 +26,17 @@
           "cameraPermission": "NexCash usa la cámara para tomar la foto de perfil y de los productos.",
           "microphonePermission": false
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-asset"
     ],
     "ios": {
       "supportsTablet": true

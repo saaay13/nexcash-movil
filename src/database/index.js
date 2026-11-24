@@ -2,6 +2,7 @@ import { obtenerBD, registrarBD } from './conexion';
 import { ESQUEMA_TABLAS, INDICES } from './esquema';
 
 export * from './conexion';
+export * from './configuracion';
 export * from './esquema';
 export * from './usuarios';
 export * from './empresas';

@@ -171,7 +171,15 @@ CREATE INDEX IF NOT EXISTS idx_empresas_vinculacion ON empresas(codigo_vinculaci
 CREATE INDEX IF NOT EXISTS idx_pagos_venta ON pagos_venta(venta_id);
 `;
 
+export const TABLA_CONFIGURACION = `
+CREATE TABLE IF NOT EXISTS configuracion (
+  clave TEXT PRIMARY KEY,
+  valor INTEGER NOT NULL DEFAULT 1
+);
+`;
+
 export const ESQUEMA_TABLAS = `
+${TABLA_CONFIGURACION}
 ${TABLA_USUARIOS}
 ${TABLA_EMPRESAS}
 ${TABLA_EMPRESA_USUARIO}

@@ -25,7 +25,7 @@ import {
   obtenerProductos,
   registrarVenta,
 } from '../database';
-import { useSesion } from '../context';
+import { useConfiguracion, useSesion } from '../context';
 import {
   consultarProductoPorCodigo,
   crearEnlaceTicket,
@@ -38,6 +38,7 @@ export default function VenderScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { empresa, empresaId, usuario, usuarioId } = useSesion();
+  const { notificarEscaneo } = useConfiguracion();
   const productoDesdeParametro = route.params?.productoId;
 
   const [productos, setProductos] = useState([]);
@@ -258,6 +259,7 @@ export default function VenderScreen() {
       setConteoEscaneos((actual) => actual + 1);
       marcarEscaneado(producto.id);
       setUltimoEscaneo({ tipo: 'ok', nombre, codigo });
+      notificarEscaneo();
     } catch (e) {
       setUltimoEscaneo({
         tipo: 'error',
