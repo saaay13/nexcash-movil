@@ -28,7 +28,7 @@ export default function BienvenidaScreen() {
           </View>
 
           <Text style={styles.titulo}>NexCash</Text>
-          <Text style={styles.lema}>Gestiona desde tu celular</Text>
+          <Text style={styles.lema}>Gestiona tu negocio desde tu celular</Text>
           <View style={styles.badgeUbicacion}>
             <Ionicons name="location-outline" size={13} color="#FFFFFF" />
             <Text style={styles.badgeTexto}>Tarija · Bolivia</Text>

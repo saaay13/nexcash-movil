@@ -151,6 +151,110 @@ export async function obtenerHistorialMovimientosCaja(empresaId, { limite = 100 
   );
 }
 
+export async function obtenerHistorialSesionesCaja(empresaId, { limite = 50 } = {}) {
+  const empresa = Number(empresaId);
+  if (!Number.isInteger(empresa) || empresa <= 0) return [];
+
+  const db = await obtenerBD();
+  const sesiones = await db.getAllAsync(
+    `SELECT
+       s.id, s.estado, s.creado_en, s.fecha_cierre,
+       s.monto_inicial, s.monto_esperado, s.monto_real, s.diferencia,
+       ua.nombre AS usuario_apertura,
+       uc.nombre AS usuario_cierre
+     FROM sesiones_caja s
+     JOIN usuarios ua ON ua.id = s.usuario_apertura_id
+     LEFT JOIN usuarios uc ON uc.id = s.usuario_cierre_id
+     WHERE s.empresa_id = ?
+     ORDER BY s.id DESC
+     LIMIT ?`,
+    empresa,
+    Number(limite) || 50
+  );
+
+  if (!sesiones.length) return [];
+
+  const ids = sesiones.map((sesion) => Number(sesion.id));
+  const marcadores = ids.map(() => '?').join(', ');
+
+  const movimientos = await db.getAllAsync(
+    `SELECT m.id, m.sesion_caja_id, m.tipo, m.concepto, m.monto, m.creado_en,
+            u.nombre AS usuario
+     FROM movimientos_caja m
+     JOIN usuarios u ON u.id = m.usuario_id
+     WHERE m.sesion_caja_id IN (${marcadores})
+     ORDER BY m.creado_en ASC, m.id ASC`,
+    ...ids
+  );
+
+  const ventas = await db.getAllAsync(
+    `SELECT v.id, v.sesion_caja_id, v.numero_venta, v.metodo_pago, v.total,
+            v.estado, v.creado_en, u.nombre AS usuario
+     FROM ventas v
+     JOIN usuarios u ON u.id = v.usuario_id
+     WHERE v.sesion_caja_id IN (${marcadores})
+     ORDER BY v.creado_en ASC, v.id ASC`,
+    ...ids
+  );
+
+  const porSesion = new Map(
+    sesiones.map((sesion) => [
+      Number(sesion.id),
+      {
+        ...sesion,
+        movimientos: [],
+        ventas: [],
+        eventos: [],
+        totalEfectivo: 0,
+        totalQr: 0,
+        totalIngresos: 0,
+        totalEgresos: 0,
+      },
+    ])
+  );
+
+  movimientos.forEach((movimiento) => {
+    const sesion = porSesion.get(Number(movimiento.sesion_caja_id));
+    if (!sesion) return;
+    const monto = Number(movimiento.monto) || 0;
+    if (movimiento.tipo === 'ingreso') sesion.totalIngresos += monto;
+    else sesion.totalEgresos += monto;
+    sesion.movimientos.push(movimiento);
+    sesion.eventos.push({ ...movimiento, kind: 'movimiento' });
+  });
+
+  ventas.forEach((venta) => {
+    const sesion = porSesion.get(Number(venta.sesion_caja_id));
+    if (!sesion) return;
+    sesion.ventas.push(venta);
+    sesion.eventos.push({ ...venta, kind: 'venta' });
+    if (venta.estado !== 'completada') return;
+    const total = Number(venta.total) || 0;
+    if (venta.metodo_pago === 'efectivo') sesion.totalEfectivo += total;
+    if (venta.metodo_pago === 'qr') sesion.totalQr += total;
+  });
+
+  return Array.from(porSesion.values()).map((sesion) => {
+    sesion.totalEfectivo = redondear(sesion.totalEfectivo);
+    sesion.totalQr = redondear(sesion.totalQr);
+    sesion.totalIngresos = redondear(sesion.totalIngresos);
+    sesion.totalEgresos = redondear(sesion.totalEgresos);
+    sesion.esperadoCalculado = redondear(
+      Number(sesion.monto_inicial) +
+        sesion.totalEfectivo +
+        sesion.totalIngresos -
+        sesion.totalEgresos
+    );
+    sesion.eventos.sort((a, b) => {
+      const fechaA = String(a.creado_en ?? '');
+      const fechaB = String(b.creado_en ?? '');
+      if (fechaA === fechaB) return Number(a.id) - Number(b.id);
+      return fechaA.localeCompare(fechaB);
+    });
+    return sesion;
+  });
+}
+
 export async function cerrarSesionCaja({ sesionId, usuarioId, empresaId, montoReal }) {
   const { empresa, usuario } = idsValidos(empresaId, usuarioId);
   if (!empresa) throw new Error('No hay una empresa activa.');

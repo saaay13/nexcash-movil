@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -40,6 +41,7 @@ export default function CajaScreen() {
 
   const [modalCierre, setModalCierre] = useState(false);
   const [montoContado, setMontoContado] = useState('');
+  const [montoQrContado, setMontoQrContado] = useState('');
   const [guardandoCierre, setGuardandoCierre] = useState(false);
 
   const [modalMovimiento, setModalMovimiento] = useState(false);
@@ -123,17 +125,25 @@ export default function CajaScreen() {
 
   function abrirArqueo() {
     setMontoContado(String(dineroEsperado));
+    setMontoQrContado(String(Number(resumen.totalQr) || 0));
     setModalCierre(true);
   }
 
   async function handleConfirmarCierre() {
     const valorReal = parseFloat(montoContado.replace(',', '.'));
-    if (isNaN(valorReal) || valorReal < 0) {
+    const valorQr = parseFloat(montoQrContado.replace(',', '.'));
+    if (
+      isNaN(valorReal) ||
+      isNaN(valorQr) ||
+      valorReal < 0 ||
+      valorQr < 0
+    ) {
       setDialogo({
         visible: true,
         tipo: 'advertencia',
-        titulo: 'Valor inválido',
-        mensaje: 'Por favor ingresa un monto físico válido en Bolivianos.',
+        titulo: 'Valores inválidos',
+        mensaje:
+          'Ingresa montos válidos para el efectivo físico y para el QR recibido.',
         textoConfirmar: 'Entendido',
         textoCancelar: null,
         onConfirmar: cerrarDialogo,
@@ -150,12 +160,25 @@ export default function CajaScreen() {
         montoReal: valorReal,
       });
 
+      const qrEsperado = Number(resumen.totalQr) || 0;
+      const difQr = Math.round((valorQr - qrEsperado + Number.EPSILON) * 100) / 100;
+      const efectivoOk = Math.abs(Number(resultado.diferencia) || 0) < 0.01;
+      const qrOk = Math.abs(difQr) < 0.01;
+
       setModalCierre(false);
       setDialogo({
         visible: true,
         tipo: 'exito',
         titulo: 'Turno de Caja Cerrado',
-        mensaje: `Arqueo completado exitosamente.\nEsperado: ${bs(resultado.montoEsperado)}\nReal: ${bs(resultado.montoReal)}\nDiferencia: ${bs(resultado.diferencia)}`,
+        mensaje: [
+          'Arqueo completado:',
+          `${efectivoOk ? '✓' : '!' } Efectivo: esperado ${bs(resultado.montoEsperado)} · físico ${bs(resultado.montoReal)}`,
+          efectivoOk
+            ? '   Efectivo verificado'
+            : `   Diferencia de efectivo: ${bs(resultado.diferencia)}`,
+          `${qrOk ? '✓' : '!' } QR: esperado ${bs(qrEsperado)} · recibido ${bs(valorQr)}`,
+          qrOk ? '   QR verificado' : `   Diferencia de QR: ${bs(difQr)}`,
+        ].join('\n'),
         textoConfirmar: 'Aceptar',
         textoCancelar: null,
         onConfirmar: () => {

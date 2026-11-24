@@ -114,7 +114,7 @@ export default function LoginScreen() {
               resizeMode="contain"
             />
             <Text style={styles.titulo}>NexCash</Text>
-            <Text style={styles.lema}>Gestiona desde tu celular</Text>
+            <Text style={styles.lema}>Gestiona tu negocio desde tu celular</Text>
             <View style={styles.ubicacion}>
               <Ionicons name="location-outline" size={13} color="#FFFFFF" />
               <Text style={styles.ubicacionTexto}>Tarija · Bolivia</Text>

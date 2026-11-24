@@ -6,10 +6,8 @@ import { DialogoConfirmacion } from '../components/molecules';
 import { DrawerLateral } from '../components/organisms';
 import { Pantalla } from '../components/templates';
 import { bs, colores, espacios, radios, sombras } from '../theme';
-import { mensajeError, obtenerHistorialMovimientosCaja } from '../database';
+import { mensajeError, obtenerHistorialSesionesCaja } from '../database';
 import { useSesion } from '../context';
-
-const FILTROS = ['Todos', 'Ingresos', 'Egresos'];
 
 function formatearFecha(valor) {
   if (!valor) return '';
@@ -20,12 +18,18 @@ function formatearFecha(valor) {
   return `${dia}/${mes}/${anio} ${hora.slice(0, 5)}`;
 }
 
+function formatearRango(inicio, fin) {
+  const inicioTexto = formatearFecha(inicio);
+  if (!fin) return `${inicioTexto} · en curso`;
+  return `${inicioTexto} → ${formatearFecha(fin)}`;
+}
+
 export default function HistorialCajaScreen() {
   const navigation = useNavigation();
   const { empresaId } = useSesion();
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [movimientos, setMovimientos] = useState([]);
-  const [filtro, setFiltro] = useState('Todos');
+  const [sesiones, setSesiones] = useState([]);
+  const [expandidos, setExpandidos] = useState({});
   const [dialogo, setDialogo] = useState({
     visible: false,
     tipo: 'info',
@@ -43,14 +47,24 @@ export default function HistorialCajaScreen() {
 
   const cargar = useCallback(async () => {
     if (!empresaId) {
-      setMovimientos([]);
+      setSesiones([]);
+      setExpandidos({});
       return;
     }
     try {
-      const lista = await obtenerHistorialMovimientosCaja(empresaId, { limite: 100 });
-      setMovimientos(Array.isArray(lista) ? lista : []);
+      const lista = await obtenerHistorialSesionesCaja(empresaId, { limite: 50 });
+      const historial = Array.isArray(lista) ? lista : [];
+      setSesiones(historial);
+      setExpandidos((actual) =>
+        Object.keys(actual).length > 0
+          ? actual
+          : historial.length > 0
+            ? { [historial[0].id]: true }
+            : {}
+      );
     } catch (e) {
-      setMovimientos([]);
+      setSesiones([]);
+      setExpandidos({});
       setDialogo({
         visible: true,
         tipo: 'advertencia',
@@ -70,28 +84,27 @@ export default function HistorialCajaScreen() {
     }, [cargar])
   );
 
-  const movimientosVisibles = useMemo(() => {
-    if (filtro === 'Ingresos') return movimientos.filter((m) => m.tipo === 'ingreso');
-    if (filtro === 'Egresos') return movimientos.filter((m) => m.tipo === 'egreso');
-    return movimientos;
-  }, [movimientos, filtro]);
-
   const totales = useMemo(() => {
-    const resultado = { ingresos: 0, egresos: 0, neto: 0 };
-    movimientos.forEach((m) => {
-      const monto = Number(m.monto) || 0;
-      if (m.tipo === 'ingreso') resultado.ingresos += monto;
-      else resultado.egresos += monto;
+    const resultado = { ingresos: 0, egresos: 0, neto: 0, efectivo: 0, qr: 0 };
+    sesiones.forEach((sesion) => {
+      resultado.ingresos += Number(sesion.totalIngresos) || 0;
+      resultado.egresos += Number(sesion.totalEgresos) || 0;
+      resultado.efectivo += Number(sesion.totalEfectivo) || 0;
+      resultado.qr += Number(sesion.totalQr) || 0;
     });
     resultado.neto = resultado.ingresos - resultado.egresos;
     return resultado;
-  }, [movimientos]);
+  }, [sesiones]);
+
+  function alternarSesion(id) {
+    setExpandidos((actual) => ({ ...actual, [id]: !actual[id] }));
+  }
 
   return (
     <>
       <Pantalla
         titulo="Historial de Caja"
-        descripcion="Consulta los ingresos y egresos de todos tus turnos, con la persona que registró cada movimiento."
+        descripcion="Cada turno desde la apertura hasta el cierre, con cobros, movimientos y arqueo."
         accion={
           <TouchableOpacity
             onPress={() => setDrawerVisible(true)}
@@ -124,69 +137,26 @@ export default function HistorialCajaScreen() {
         </View>
 
         <Text style={styles.conteoTexto}>
-          {movimientosVisibles.length} movimiento(s) registrado(s)
+          {sesiones.length} turno(s) registrado(s)
         </Text>
 
-        <View style={styles.filtros}>
-          {FILTROS.map((opcion) => (
-            <TouchableOpacity
-              key={opcion}
-              style={[styles.chip, filtro === opcion && styles.chipActivo]}
-              onPress={() => setFiltro(opcion)}
-            >
-              <Text style={[styles.chipTexto, filtro === opcion && styles.chipTextoActivo]}>
-                {opcion}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {movimientosVisibles.length === 0 ? (
+        {sesiones.length === 0 ? (
           <View style={styles.vacio}>
-            <Ionicons name="receipt-outline" size={38} color={colores.contorno} />
-            <Text style={styles.vacioTitulo}>Sin movimientos</Text>
+            <Ionicons name="cash-outline" size={38} color={colores.contorno} />
+            <Text style={styles.vacioTitulo}>Sin turnos de caja</Text>
             <Text style={styles.vacioTexto}>
-              Los ingresos y egresos que registres en Caja y Arqueo aparecerán aquí.
+              Abre un turno en Caja y Arqueo para ver aquí su apertura, movimientos y cierre.
             </Text>
           </View>
         ) : (
-          movimientosVisibles.map((m) => {
-            const esIngreso = m.tipo === 'ingreso';
-            const color = esIngreso ? '#15803D' : '#DC2626';
-            const fondo = esIngreso ? '#DCFCE7' : '#FEE2E2';
-
-            return (
-              <View key={m.id} style={styles.tarjeta}>
-                <View style={[styles.iconoCaja, { backgroundColor: fondo }]}>
-                  <Ionicons
-                    name={esIngreso ? 'arrow-down' : 'arrow-up'}
-                    size={20}
-                    color={color}
-                  />
-                </View>
-                <View style={styles.info}>
-                  <View style={styles.topFila}>
-                    <Text style={styles.concepto} numberOfLines={1}>
-                      {m.concepto}
-                    </Text>
-                    <Text style={[styles.monto, { color }]}>
-                      {esIngreso ? '+' : '-'}
-                      {bs(m.monto)}
-                    </Text>
-                  </View>
-                  <Text style={styles.usuario} numberOfLines={1}>
-                    Registrado por {m.usuario || 'usuario no identificado'}
-                  </Text>
-                  <View style={styles.pieFila}>
-                    <Text style={styles.turno}>
-                      Turno #{m.sesion_caja_id} · {m.sesion_estado === 'cerrada' ? 'Cerrado' : 'Abierto'}
-                    </Text>
-                    <Text style={styles.fecha}>{formatearFecha(m.creado_en)}</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })
+          sesiones.map((sesion) => (
+            <TarjetaSesion
+              key={sesion.id}
+              sesion={sesion}
+              expandida={Boolean(expandidos[sesion.id])}
+              onAlternar={() => alternarSesion(sesion.id)}
+            />
+          ))
         )}
       </Pantalla>
 
@@ -202,11 +172,190 @@ export default function HistorialCajaScreen() {
         titulo={dialogo.titulo}
         mensaje={dialogo.mensaje}
         textoConfirmar={dialogo.textoConfirmar}
-        textoCancelar={dialogo.textoCancelar}
+        textoCancelar={dialogo.textoCancelar ?? null}
         onConfirmar={dialogo.onConfirmar}
         onCancelar={dialogo.onCancelar}
       />
     </>
+  );
+}
+
+function TarjetaSesion({ sesion, expandida, onAlternar }) {
+  const cerrada = sesion.estado === 'cerrada';
+  const diferencia = Number(sesion.diferencia) || 0;
+  const verificado = cerrada && Math.abs(diferencia) < 0.01;
+  const estadoTexto = !cerrada
+    ? 'Turno en curso'
+    : verificado
+      ? 'Caja verificada'
+      : `Diferencia de ${bs(diferencia)}`;
+  const estadoColor = !cerrada ? '#B45309' : verificado ? colores.exito : colores.error;
+  const estadoFondo = !cerrada ? '#FEF3C7' : verificado ? '#ECFDF5' : '#FFE0E0';
+
+  return (
+    <View style={styles.tarjeta}>
+      <TouchableOpacity
+        style={styles.cabeceraSesion}
+        activeOpacity={0.8}
+        onPress={onAlternar}
+        accessibilityLabel={`Turno ${sesion.id}, ${expandida ? 'ocultar' : 'ver'} detalle`}
+      >
+        <View
+          style={[
+            styles.iconoCaja,
+            { backgroundColor: cerrada ? '#E0F2FE' : '#FEF3C7' },
+          ]}
+        >
+          <Ionicons
+            name={cerrada ? 'checkmark-circle-outline' : 'time-outline'}
+            size={20}
+            color={cerrada ? '#0369A1' : '#B45309'}
+          />
+        </View>
+        <View style={styles.cabeceraInfo}>
+          <Text style={styles.tituloTurno}>Turno #{sesion.id}</Text>
+          <Text style={styles.subtituloTurno}>
+            {formatearRango(sesion.creado_en, sesion.fecha_cierre)}
+          </Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: estadoFondo }]}>
+          <Text style={[styles.badgeTexto, { color: estadoColor }]}>
+            {cerrada ? 'Cerrada' : 'Abierta'}
+          </Text>
+        </View>
+        <Ionicons
+          name={expandida ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={colores.contorno}
+        />
+      </TouchableOpacity>
+
+      <Text style={styles.usuariosTurno}>
+        Abierta por {sesion.usuario_apertura || 'no identificado'} · Cerrada por{' '}
+        {sesion.usuario_cierre || '—'}
+      </Text>
+
+      {expandida ? (
+        <View style={styles.detalle}>
+          <View style={styles.aperturaFila}>
+            <Text style={styles.etiquetaFuerte}>Apertura de caja</Text>
+            <Text style={styles.montoFuerte}>{bs(sesion.monto_inicial)}</Text>
+          </View>
+
+          <Text style={styles.seccionEtiqueta}>COBROS Y MOVIMIENTOS</Text>
+          {sesion.eventos.length === 0 ? (
+            <Text style={styles.sinEventos}>
+              No se registraron cobros ni movimientos en este turno.
+            </Text>
+          ) : (
+            sesion.eventos.map((evento) => (
+              <FilaEvento key={`${evento.kind}-${evento.id}`} evento={evento} />
+            ))
+          )}
+
+          <View style={styles.divisor} />
+
+          <View style={styles.totalesGrid}>
+            <DatoTotal etiqueta="Efectivo" valor={bs(sesion.totalEfectivo)} />
+            <DatoTotal etiqueta="QR" valor={bs(sesion.totalQr)} color={colores.terciario} />
+            <DatoTotal etiqueta="Ingresos" valor={bs(sesion.totalIngresos)} color={colores.exito} />
+            <DatoTotal etiqueta="Egresos" valor={bs(sesion.totalEgresos)} color={colores.error} />
+          </View>
+
+          <View style={styles.divisor} />
+
+          <View style={styles.cierreGrid}>
+            <DatoTotal
+              etiqueta="Total esperado"
+              valor={bs(sesion.esperadoCalculado)}
+            />
+            <DatoTotal
+              etiqueta="Caja física"
+              valor={cerrada ? bs(sesion.monto_real) : '—'}
+            />
+            <DatoTotal
+              etiqueta="Diferencia"
+              valor={cerrada ? bs(diferencia) : '—'}
+              color={cerrada && !verificado ? colores.error : undefined}
+            />
+          </View>
+
+          <View style={[styles.estadoCierre, { backgroundColor: estadoFondo }]}>
+            <Ionicons
+              name={!cerrada ? 'time-outline' : verificado ? 'shield-checkmark-outline' : 'alert-circle-outline'}
+              size={15}
+              color={estadoColor}
+            />
+            <Text style={[styles.estadoCierreTexto, { color: estadoColor }]}>
+              {estadoTexto}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function FilaEvento({ evento }) {
+  const esMovimiento = evento.kind === 'movimiento';
+  const esIngreso = esMovimiento && evento.tipo === 'ingreso';
+  const anulada = !esMovimiento && evento.estado !== 'completada';
+  const esQr = !esMovimiento && evento.metodo_pago === 'qr';
+
+  let etiqueta;
+  let detalle;
+  let monto;
+  let color;
+  let fondo;
+  let icono;
+
+  if (esMovimiento) {
+    etiqueta = esIngreso ? 'Ingreso' : 'Egreso';
+    detalle = evento.concepto;
+    monto = `${esIngreso ? '+' : '-'}${bs(evento.monto)}`;
+    color = esIngreso ? '#15803D' : '#DC2626';
+    fondo = esIngreso ? '#DCFCE7' : '#FEE2E2';
+    icono = esIngreso ? 'arrow-down-outline' : 'arrow-up-outline';
+  } else {
+    etiqueta = anulada
+      ? 'Venta anulada'
+      : `Venta #${String(evento.numero_venta ?? '').padStart(3, '0')}`;
+    detalle = `${evento.metodo_pago === 'qr' ? 'QR' : evento.metodo_pago}${
+      evento.usuario ? ` · ${evento.usuario}` : ''
+    }`;
+    monto = anulada ? bs(evento.total) : `+${bs(evento.total)}`;
+    color = anulada ? colores.contorno : esQr ? colores.terciario : '#15803D';
+    fondo = anulada ? '#F1F5F9' : esQr ? '#F5E8FF' : '#DCFCE7';
+    icono = esQr ? 'qr-code-outline' : 'receipt-outline';
+  }
+
+  return (
+    <View style={styles.eventoFila}>
+      <View style={[styles.eventoIcono, { backgroundColor: fondo }]}>
+        <Ionicons name={icono} size={16} color={color} />
+      </View>
+      <View style={styles.eventoInfo}>
+        <View style={styles.eventoTop}>
+          <Text style={[styles.eventoEtiqueta, anulada && styles.textoAnulado]} numberOfLines={1}>
+            {etiqueta}
+          </Text>
+          <Text style={[styles.eventoMonto, { color }]}>{monto}</Text>
+        </View>
+        <Text style={styles.eventoDetalle} numberOfLines={1}>
+          {detalle}
+        </Text>
+        <Text style={styles.eventoHora}>{formatearFecha(evento.creado_en)}</Text>
+      </View>
+    </View>
+  );
+}
+
+function DatoTotal({ etiqueta, valor, color }) {
+  return (
+    <View style={styles.datoTotal}>
+      <Text style={styles.datoEtiqueta}>{etiqueta}</Text>
+      <Text style={[styles.datoValor, color && { color }]}>{valor}</Text>
+    </View>
   );
 }
 
@@ -256,90 +405,181 @@ const styles = StyleSheet.create({
     color: colores.textoSuave,
     marginBottom: espacios.sm,
   },
-  filtros: {
-    flexDirection: 'row',
-    gap: espacios.sm,
-    marginBottom: espacios.md,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: radios.full,
-    borderWidth: 1,
-    borderColor: colores.contornoSuave,
-    backgroundColor: colores.superficie,
-  },
-  chipActivo: {
-    backgroundColor: colores.primarioContenedor,
-    borderColor: colores.primarioContenedor,
-  },
-  chipTexto: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colores.textoSuave,
-  },
-  chipTextoActivo: {
-    color: '#FFFFFF',
-  },
   tarjeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espacios.md,
     backgroundColor: colores.superficie,
     borderRadius: radios.xl,
     padding: espacios.md,
-    marginBottom: espacios.sm,
+    marginBottom: espacios.md,
     borderWidth: 1,
     borderColor: colores.borde,
     ...sombras.tarjeta,
   },
+  cabeceraSesion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacios.sm,
+  },
   iconoCaja: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: radios.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  info: {
+  cabeceraInfo: {
     flex: 1,
     minWidth: 0,
   },
-  topFila: {
+  tituloTurno: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colores.texto,
+  },
+  subtituloTurno: {
+    fontSize: 11,
+    color: colores.textoSuave,
+    marginTop: 2,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radios.full,
+  },
+  badgeTexto: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  usuariosTurno: {
+    fontSize: 11,
+    color: colores.textoSuave,
+    marginTop: 8,
+  },
+  detalle: {
+    marginTop: espacios.md,
+  },
+  aperturaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colores.superficieBaja,
+    borderRadius: radios.lg,
+    paddingHorizontal: espacios.md,
+    paddingVertical: 10,
+  },
+  etiquetaFuerte: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colores.texto,
+  },
+  montoFuerte: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: colores.primarioContenedor,
+  },
+  seccionEtiqueta: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colores.textoSuave,
+    letterSpacing: 0.7,
+    marginTop: espacios.md,
+    marginBottom: espacios.sm,
+  },
+  sinEventos: {
+    fontSize: 12,
+    color: colores.contorno,
+    fontStyle: 'italic',
+  },
+  eventoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacios.sm,
+    paddingVertical: 6,
+  },
+  eventoIcono: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventoInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  eventoTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 6,
   },
-  concepto: {
-    fontSize: 14,
+  eventoEtiqueta: {
+    fontSize: 12,
     fontWeight: '800',
     color: colores.texto,
     flex: 1,
   },
-  monto: {
-    fontSize: 14,
+  textoAnulado: {
+    color: colores.contorno,
+    textDecorationLine: 'line-through',
+  },
+  eventoMonto: {
+    fontSize: 12,
     fontWeight: '900',
   },
-  usuario: {
-    fontSize: 12,
-    color: colores.textoSuave,
-    marginTop: 2,
-  },
-  pieFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-    marginTop: 4,
-  },
-  turno: {
+  eventoDetalle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colores.primarioContenedor,
+    color: colores.textoSuave,
+    marginTop: 1,
   },
-  fecha: {
+  eventoHora: {
     fontSize: 10,
     color: colores.contorno,
+    marginTop: 1,
+  },
+  divisor: {
+    height: 1,
+    backgroundColor: colores.borde,
+    marginVertical: espacios.md,
+  },
+  totalesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: espacios.md,
+  },
+  cierreGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: espacios.sm,
+  },
+  datoTotal: {
+    width: '25%',
+    alignItems: 'center',
+  },
+  datoEtiqueta: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colores.textoSuave,
+    textAlign: 'center',
+  },
+  datoValor: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: colores.texto,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  estadoCierre: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radios.lg,
+    paddingVertical: 9,
+    marginTop: espacios.md,
+  },
+  estadoCierreTexto: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   vacio: {
     alignItems: 'center',
