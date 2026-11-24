@@ -1,5 +1,13 @@
-import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Boton } from '../atoms';
 import CodigoQr from './CodigoQr';
@@ -13,9 +21,26 @@ export default function DialogoTicketQr({
   onDescargarPdf,
   descargando = false,
 }) {
+  const { width, height } = useWindowDimensions();
+  const [centrar, setCentrar] = useState(true);
+  const alturaVentana = useRef(0);
+  const alturaContenido = useRef(0);
+
   if (!visible || !ticket) return null;
 
   const numero = String(ticket.numero ?? '').padStart(3, '0');
+  const tamanoQr = Math.max(
+    140,
+    Math.min(260, Math.floor(Math.min(width - 112, height * 0.34)))
+  );
+
+  function sincronizarCentrado() {
+    const disponible = alturaVentana.current;
+    const contenido = alturaContenido.current;
+    if (disponible > 0 && contenido > 0) {
+      setCentrar(contenido <= disponible);
+    }
+  }
 
   return (
     <Modal
@@ -28,24 +53,44 @@ export default function DialogoTicketQr({
         <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} />
 
         <ScrollView
-          contentContainerStyle={styles.contenidoScroll}
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.contenidoScroll,
+            centrar && styles.contenidoCentrado,
+          ]}
+          onLayout={(evento) => {
+            alturaVentana.current = evento.nativeEvent.layout.height;
+            sincronizarCentrado();
+          }}
+          onContentSizeChange={(_ancho, alto) => {
+            alturaContenido.current = alto;
+            sincronizarCentrado();
+          }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.tarjeta}>
+            <Pressable
+              onPress={onCerrar}
+              accessibilityLabel="Cerrar ticket"
+              accessibilityRole="button"
+              style={styles.botonCerrar}
+            >
+              <Ionicons name="close" size={18} color={colores.textoSuave} />
+            </Pressable>
+
             <View style={styles.circuloIcono}>
               <Ionicons
                 name="qr-code-outline"
-                size={26}
+                size={24}
                 color={colores.textoSobrePrimario}
               />
             </View>
 
             <Text style={styles.titulo}>Tu ticket está listo</Text>
             <Text style={styles.mensaje}>
-              Muestra este QR al cliente: con conexión a internet, al escanearlo se
-              abre su comprobante y el PDF se descarga automáticamente. Si no se
-              descarga, el cliente puede tocar Descargar PDF. Aquí guardas tu copia
-              local.
+              Muestra este QR al cliente: con internet abre su comprobante y
+              descarga el PDF. Aquí guardas tu copia local.
             </Text>
 
             <View style={styles.resumen}>
@@ -64,7 +109,7 @@ export default function DialogoTicketQr({
             </View>
 
             <View style={styles.qrCaja}>
-              <CodigoQr valor={ticket.enlace} tamano={260} />
+              <CodigoQr valor={ticket.enlace} tamano={tamanoQr} />
             </View>
 
             <Text style={styles.aviso}>
@@ -118,54 +163,69 @@ const styles = StyleSheet.create({
   fondoOscuro: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espacios.lg,
+    paddingHorizontal: espacios.md,
+  },
+  scroll: {
+    flex: 1,
   },
   contenidoScroll: {
     flexGrow: 1,
-    justifyContent: 'center',
     width: '100%',
+    paddingVertical: espacios.md,
     alignItems: 'center',
+  },
+  contenidoCentrado: {
+    justifyContent: 'center',
   },
   tarjeta: {
     width: '100%',
     maxWidth: 360,
     backgroundColor: colores.superficie,
     borderRadius: radios.xxl,
-    padding: espacios.xl,
+    padding: espacios.lg,
     alignItems: 'center',
     ...sombras.flotante,
   },
+  botonCerrar: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.superficieBaja,
+  },
   circuloIcono: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colores.primarioContenedor,
     marginBottom: espacios.sm,
   },
   titulo: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: colores.texto,
     textAlign: 'center',
   },
   mensaje: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 17,
     color: colores.textoSuave,
     textAlign: 'center',
     marginTop: espacios.xs,
-    marginBottom: espacios.md,
+    marginBottom: espacios.sm,
   },
   resumen: {
     width: '100%',
     backgroundColor: colores.superficieBaja,
     borderRadius: radios.lg,
-    padding: espacios.md,
-    marginBottom: espacios.md,
+    padding: espacios.sm,
+    marginBottom: espacios.sm,
   },
   resumenFila: {
     flexDirection: 'row',
@@ -182,7 +242,7 @@ const styles = StyleSheet.create({
     color: colores.texto,
   },
   qrCaja: {
-    padding: espacios.sm,
+    padding: 6,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colores.borde,
@@ -200,7 +260,7 @@ const styles = StyleSheet.create({
     color: colores.primarioContenedor,
     textAlign: 'center',
     marginTop: espacios.xs,
-    marginBottom: espacios.md,
+    marginBottom: espacios.sm,
   },
   botonPdf: {
     width: '100%',

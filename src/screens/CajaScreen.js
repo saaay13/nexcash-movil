@@ -26,6 +26,38 @@ import {
 } from '../database';
 import { useSesion } from '../context';
 
+function BloqueDiferencia({ etiqueta, valor, esperado }) {
+  const monto = parseFloat(String(valor ?? '').replace(',', '.')) || 0;
+  const dif = Math.round((monto - Number(esperado) + Number.EPSILON) * 100) / 100;
+  const esCero = Math.abs(dif) < 0.01;
+  const esSobrante = dif > 0;
+
+  return (
+    <View
+      style={[
+        styles.diferenciaBox,
+        {
+          backgroundColor: esCero ? '#DCFCE7' : esSobrante ? '#E0F2FE' : '#FEE2E2',
+        },
+      ]}
+    >
+      <Text style={styles.diferenciaLabel}>
+        {esCero
+          ? `${etiqueta}: cuadre exacto`
+          : `${etiqueta}: ${esSobrante ? 'sobrante' : 'faltante'}`}
+      </Text>
+      <Text
+        style={[
+          styles.diferenciaValor,
+          { color: esCero ? '#15803D' : esSobrante ? '#0369A1' : '#DC2626' },
+        ]}
+      >
+        {dif >= 0 ? `+${bs(dif)}` : `- ${bs(Math.abs(dif))}`}
+      </Text>
+    </View>
+  );
+}
+
 export default function CajaScreen() {
   const navigation = useNavigation();
   const { empresaId, usuarioId } = useSesion();
@@ -168,11 +200,11 @@ export default function CajaScreen() {
       setModalCierre(false);
       setDialogo({
         visible: true,
-        tipo: 'exito',
+        tipo: efectivoOk && qrOk ? 'exito' : 'advertencia',
         titulo: 'Turno de Caja Cerrado',
         mensaje: [
           'Arqueo completado:',
-          `${efectivoOk ? '✓' : '!' } Efectivo: esperado ${bs(resultado.montoEsperado)} · físico ${bs(resultado.montoReal)}`,
+          `${efectivoOk ? '✓' : '!'} Efectivo: esperado ${bs(resultado.montoEsperado)} · físico ${bs(resultado.montoReal)}`,
           efectivoOk
             ? '   Efectivo verificado'
             : `   Diferencia de efectivo: ${bs(resultado.diferencia)}`,
@@ -494,8 +526,13 @@ export default function CajaScreen() {
       ) : null}
 
       <Modal visible={modalCierre} transparent animationType="fade" onRequestClose={() => setModalCierre(false)}>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCaja}>
+        <View style={styles.modalFondoScroll}>
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalCaja}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.modalHeader}>
               <Ionicons name="calculator-outline" size={24} color={colores.primarioContenedor} />
               <Text style={styles.modalTitulo}>Arqueo y Cierre de Turno</Text>
@@ -504,6 +541,9 @@ export default function CajaScreen() {
             <View style={styles.resumenArqueo}>
               <Text style={styles.resumenArqueoLabel}>Efectivo esperado por el sistema:</Text>
               <Text style={styles.resumenArqueoMonto}>{bs(dineroEsperado)}</Text>
+              <Text style={[styles.resumenArqueoLabel, styles.resumenArqueoSegunda]}>
+                QR esperado por el sistema: {bs(Number(resumen.totalQr) || 0)}
+              </Text>
             </View>
 
             <Campo
@@ -514,35 +554,31 @@ export default function CajaScreen() {
               keyboardType="numeric"
               icono="cash-outline"
             />
+            <BloqueDiferencia
+              etiqueta="Diferencia de efectivo"
+              valor={montoContado}
+              esperado={dineroEsperado}
+            />
 
-            {(() => {
-              const valorReal = parseFloat(montoContado.replace(',', '.')) || 0;
-              const dif = valorReal - dineroEsperado;
-              const esCero = Math.abs(dif) < 0.01;
-              const esSobrante = dif > 0.01;
-              return (
-                <View
-                  style={[
-                    styles.diferenciaBox,
-                    {
-                      backgroundColor: esCero ? '#DCFCE7' : esSobrante ? '#E0F2FE' : '#FEE2E2',
-                    },
-                  ]}
-                >
-                  <Text style={styles.diferenciaLabel}>
-                    {esCero ? 'Cuadre exacto' : esSobrante ? 'Sobrante de caja' : 'Faltante de caja'}:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.diferenciaValor,
-                      { color: esCero ? '#15803D' : esSobrante ? '#0369A1' : '#DC2626' },
-                    ]}
-                  >
-                    {dif >= 0 ? `+${bs(dif)}` : `- ${bs(Math.abs(dif))}`}
-                  </Text>
-                </View>
-              );
-            })()}
+            <Campo
+              etiqueta="Monto QR recibido (Bs)"
+              placeholder="0.00"
+              valor={montoQrContado}
+              onChangeText={setMontoQrContado}
+              keyboardType="numeric"
+              icono="qr-code-outline"
+              style={styles.campoQr}
+            />
+            <BloqueDiferencia
+              etiqueta="Diferencia de QR"
+              valor={montoQrContado}
+              esperado={Number(resumen.totalQr) || 0}
+            />
+
+            <Text style={styles.arqueoNota}>
+              Confirma ambos montos: el efectivo se registrará en el cierre y el QR
+              se verificará contra las ventas de la sesión.
+            </Text>
 
             <View style={styles.modalBotones}>
               <Boton
@@ -561,7 +597,7 @@ export default function CajaScreen() {
                 style={{ flex: 1 }}
               />
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -853,10 +889,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: espacios.lg,
   },
+  modalFondoScroll: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: espacios.lg,
+  },
+  modalScroll: {
+    flex: 1,
+  },
   modalCaja: {
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     backgroundColor: colores.superficie,
     borderRadius: radios.xxl,
-    padding: espacios.xl,
+    padding: espacios.lg,
     ...sombras.flotante,
   },
   modalHeader: {
@@ -887,6 +934,18 @@ const styles = StyleSheet.create({
     color: colores.primarioContenedor,
     marginTop: 2,
   },
+  resumenArqueoSegunda: {
+    marginTop: 6,
+  },
+  campoQr: {
+    marginTop: espacios.sm,
+  },
+  arqueoNota: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: colores.textoSuave,
+    marginTop: espacios.sm,
+  },
   diferenciaBox: {
     padding: espacios.sm,
     borderRadius: radios.md,
@@ -907,7 +966,7 @@ const styles = StyleSheet.create({
   modalBotones: {
     flexDirection: 'row',
     gap: espacios.sm,
-    marginTop: espacios.lg,
+    marginTop: espacios.md,
   },
   tipoSelector: {
     flexDirection: 'row',
