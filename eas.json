@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.0.0",
+    "version": ">= 8.0.0",
     "appVersionSource": "local"
   },
   "build": {
@@ -17,7 +17,7 @@
     "production": {
       "extends": "base",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       }
     }
   }
