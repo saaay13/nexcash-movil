@@ -24,10 +24,12 @@ import {
   HistorialCajaScreen,
   ProductosEliminadosScreen,
   ConfiguracionScreen,
+  LicenciaVencidaScreen,
 } from './src/screens';
 
 import { BarraPestanas } from './src/components/organisms';
 
+import { ESTADO, useLicencia } from './src/services/licencia';
 import { ConfiguracionProvider, SesionProvider } from './src/context';
 import { iniciarBD } from './src/database';
 
@@ -53,6 +55,12 @@ function NavegadorPrincipal() {
 }
 
 export default function App() {
+  const estadoLicencia = useLicencia();
+
+  if (estadoLicencia !== ESTADO.ACTIVA) {
+    return <LicenciaVencidaScreen estado={estadoLicencia} />;
+  }
+
   return (
     <SafeAreaProvider>
       <SQLiteProvider databaseName="nexcash.db" onInit={iniciarBD}>

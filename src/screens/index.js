@@ -15,3 +15,4 @@ export { default as MovimientosInventarioScreen } from './MovimientosInventarioS
 export { default as HistorialCajaScreen } from './HistorialCajaScreen';
 export { default as ProductosEliminadosScreen } from './ProductosEliminadosScreen';
 export { default as ConfiguracionScreen } from './ConfiguracionScreen';
+export { default as LicenciaVencidaScreen } from './LicenciaVencidaScreen';
